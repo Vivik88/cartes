@@ -6,15 +6,15 @@
 <meta name="robots" content="noindex,nofollow">
 <title>Cartes recherchées Wiki Masters</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700&family=Instrument+Sans:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Figtree:wght@400;600;800&display=swap">
 <style>
 /* Visiteurs : étiquettes, recherche, rangées de cartes qui défilent par rareté. Propriétaire : onglets de gestion et barre d'enregistrement. */
 :root{
   --bg:#0e0f12; --fg:#eceef2; --accent:#ffb224; --on-accent:#1d1400; --danger:#ff6b6b;
   --rC:#8b93a1; --rPC:#3fb37f; --rR:#4c9dff; --rSR:#b07cff; --rUR:#ff7a45; --rL:#ffcc33;
   --surface:color-mix(in srgb,var(--bg) 93%,var(--fg)); --line:color-mix(in srgb,var(--bg) 82%,var(--fg)); --muted:color-mix(in srgb,var(--fg) 62%,var(--bg));
-  --display:"Bricolage Grotesque",system-ui,sans-serif;
-  --body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
   color-scheme:dark;
 }
 @media (prefers-color-scheme: light){ :root:not([data-fixed]){
@@ -75,19 +75,6 @@ label{font-size:.8rem;font-weight:600;color:var(--muted);display:flex;flex-direc
 .rowhead small{color:var(--muted);font-variant-numeric:tabular-nums}
 .rail{display:flex;gap:12px;overflow-x:auto;margin-inline:-16px;padding:6px 16px 12px;scrollbar-width:none;overscroll-behavior-x:contain}
 .rail::-webkit-scrollbar{display:none}
-.card{--rc:var(--muted);flex:none;width:150px;aspect-ratio:5/7;position:relative;border-radius:12px;overflow:hidden;background:var(--surface);
-  border:2px solid var(--rc);text-decoration:none;color:#fff;display:flex;flex-direction:column;justify-content:flex-end;isolation:isolate}
-.card.C{--rc:var(--rC)}.card.PC{--rc:var(--rPC)}.card.R{--rc:var(--rR)}.card.SR{--rc:var(--rSR)}.card.UR{--rc:var(--rUR)}.card.L{--rc:var(--rL)}
-.card.UR,.card.L{box-shadow:0 0 18px -4px var(--rc)}
-.card img,.card .ph{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2}
-.card .ph{display:grid;place-items:center;font:700 3.4rem/1 var(--display);color:rgba(255,255,255,.55);background:linear-gradient(160deg,var(--tc,#3a3f4b),#15171c)}
-.card::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(to top,rgba(0,0,0,.9) 0%,rgba(0,0,0,.55) 32%,transparent 58%)}
-.card .badge{position:absolute;top:8px;left:8px;font-weight:600;font-size:.75rem;padding:3px 7px;border-radius:6px;background:var(--rc);color:#111}
-.card .txt{padding:10px;display:flex;flex-direction:column;gap:4px;min-width:0}
-.card strong{font:700 1rem/1.12 var(--display);overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-shadow:0 1px 3px rgba(0,0,0,.8)}
-.card .tg{font-size:.72rem;display:flex;align-items:center;gap:5px;color:rgba(255,255,255,.8);min-width:0}
-.card .tg span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.card .ok{position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;background:var(--rPC);color:#111;display:grid;place-items:center;font-weight:600;font-size:.8rem}
 .hero{align-items:center;text-align:center;gap:16px}
 .hero .btn{border-radius:999px;padding-inline:22px}
 .center{justify-content:center;text-align:center;margin-inline:auto}
@@ -97,8 +84,6 @@ label{font-size:.8rem;font-weight:600;color:var(--muted);display:flex;flex-direc
 .chip.only{min-height:44px;padding-inline:16px;color:var(--muted)}
 .chip.only[aria-pressed="true"]{background:color-mix(in srgb,var(--rPC) 16%,var(--bg));color:var(--rPC);border-color:var(--rPC)}
 #p-pub .hint{max-width:60ch}
-.card:hover{transform:translateY(-3px)}
-@media (prefers-reduced-motion: no-preference){.card{transition:transform .15s}}
 .empty{color:var(--muted);padding:22px 0;margin:0}
 footer{margin-top:20px;font-size:.8rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
 footer button{background:none;border:0;padding:6px 0;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:inherit}
@@ -131,6 +116,98 @@ footer button{background:none;border:0;padding:6px 0;color:var(--muted);text-dec
 .bar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);z-index:5;
   padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;align-items:center;justify-content:center}
 .bar span{flex:1;min-width:0;font-size:.9rem;color:var(--muted)}
+
+/* ---------- Relief : fond en profondeur, boutons en touches, cartes épaisses ---------- */
+:root{--edge:color-mix(in srgb,var(--bg) 55%,#000);--hi:rgba(255,255,255,.14)}
+html{background:var(--bg)}
+body{background:transparent;position:relative}
+body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1}
+body::before{background:
+  radial-gradient(1100px 560px at 50% -180px,color-mix(in srgb,var(--accent) 30%,transparent),transparent 70%),
+  radial-gradient(720px 560px at -8% 38%,color-mix(in srgb,var(--rSR) 22%,transparent),transparent 70%),
+  radial-gradient(820px 640px at 108% 78%,color-mix(in srgb,var(--rR) 20%,transparent),transparent 70%)}
+body::after{opacity:.55;background:
+  radial-gradient(color-mix(in srgb,var(--fg) 13%,transparent) 1px,transparent 1.6px) 0 0/22px 22px,
+  url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
+h1{font:800 clamp(1.9rem,8.4vw,3.7rem)/1.02 var(--display);letter-spacing:-.02em;
+  text-shadow:0 2px 0 color-mix(in srgb,var(--accent) 80%,#000),0 4px 0 color-mix(in srgb,var(--accent) 55%,#000),0 6px 0 color-mix(in srgb,var(--accent) 35%,#000),0 16px 26px rgba(0,0,0,.55)}
+h2{font:600 1rem/1.2 var(--display);letter-spacing:-.01em}
+.btn,.chip{background:linear-gradient(180deg,color-mix(in srgb,var(--surface) 86%,var(--fg)),var(--surface));border:1px solid var(--line);
+  box-shadow:inset 0 1px 0 var(--hi),0 4px 0 var(--edge),0 10px 18px -8px rgba(0,0,0,.6);transform:translateY(0)}
+.chip{box-shadow:inset 0 1px 0 var(--hi),0 3px 0 var(--edge),0 8px 14px -8px rgba(0,0,0,.6)}
+.btn:active,.chip:active{transform:translateY(3px);box-shadow:inset 0 1px 0 var(--hi),0 1px 0 var(--edge)}
+.btn.primary{background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 78%,#fff),var(--accent));border-color:color-mix(in srgb,var(--accent) 70%,#000);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 4px 0 color-mix(in srgb,var(--accent) 52%,#000),0 12px 22px -8px color-mix(in srgb,var(--accent) 60%,transparent)}
+.btn.primary:active{box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 1px 0 color-mix(in srgb,var(--accent) 52%,#000)}
+.btn.quiet{background:transparent;box-shadow:none}
+.chip[aria-pressed="true"]{background:linear-gradient(180deg,#fff,color-mix(in srgb,var(--fg) 88%,var(--bg)));color:var(--bg);border-color:transparent;transform:translateY(2px);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 1px 0 color-mix(in srgb,var(--fg) 45%,#000)}
+.ribbon{padding-bottom:9px}.cloud{padding-bottom:4px}
+input[type=text],input[type=search],input[type=password],select,textarea{box-shadow:inset 0 2px 5px rgba(0,0,0,.4),0 1px 0 var(--hi)}
+.box{box-shadow:inset 0 1px 0 var(--hi),0 6px 0 var(--edge),0 22px 34px -18px rgba(0,0,0,.7);border-radius:18px}
+.tabs{box-shadow:inset 0 2px 6px rgba(0,0,0,.45);background:color-mix(in srgb,var(--bg) 70%,#000)}
+.tabs button[aria-selected="true"]{background:linear-gradient(180deg,#fff,color-mix(in srgb,var(--fg) 86%,var(--bg)));box-shadow:0 3px 0 color-mix(in srgb,var(--fg) 45%,#000)}
+.bar{box-shadow:0 -10px 30px rgba(0,0,0,.5)}
+@media (prefers-reduced-motion: no-preference){.btn,.chip{transition:transform .08s,box-shadow .08s}}
+
+/* En-tête public */
+.hero{gap:22px;padding-top:10px}
+.hero .btn{font-weight:800;padding:13px 26px}
+#ptags{gap:10px 9px}
+#ptags .chip{font-weight:800;font-size:.98rem;padding:10px 8px 10px 16px;min-height:46px;gap:10px}
+#ptags .chip small{font-weight:800;font-size:.8rem;color:var(--fg);background:color-mix(in srgb,var(--bg) 70%,#000);border-radius:999px;padding:3px 9px;box-shadow:inset 0 1px 3px rgba(0,0,0,.6)}
+#ptags .chip[aria-pressed="true"]{background:linear-gradient(180deg,color-mix(in srgb,var(--tc,var(--accent)) 76%,#fff),var(--tc,var(--accent)));color:var(--tt,var(--on-accent));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 1px 0 color-mix(in srgb,var(--tc,var(--accent)) 50%,#000),0 0 26px -4px var(--tc,var(--accent))}
+#ptags .chip[aria-pressed="true"] small{background:rgba(0,0,0,.28);color:#fff;opacity:1}
+#psub{font-size:1.02rem}
+#psub b{font:800 1.25rem/1 var(--display);margin-right:2px}
+#pq{min-height:48px}
+.chip.only{font-weight:800;min-height:48px}
+.chip.only[aria-pressed="true"]{background:linear-gradient(180deg,color-mix(in srgb,var(--rPC) 30%,var(--surface)),color-mix(in srgb,var(--rPC) 16%,var(--surface)));color:color-mix(in srgb,var(--rPC) 70%,var(--fg));border-color:var(--rPC);
+  box-shadow:inset 0 1px 0 var(--hi),0 1px 0 color-mix(in srgb,var(--rPC) 45%,#000),0 0 22px -8px var(--rPC)}
+
+/* Rangées : un titre en médaille, les cartes posées sur une tablette */
+.rowhead{--rc:var(--muted);align-items:center;gap:12px;margin:22px 0 2px}
+.rowhead.C{--rc:var(--rC)}.rowhead.PC{--rc:var(--rPC)}.rowhead.R{--rc:var(--rR)}.rowhead.SR{--rc:var(--rSR)}.rowhead.UR{--rc:var(--rUR)}.rowhead.L{--rc:var(--rL)}
+.rowhead h2{gap:12px;font-size:1.05rem}
+.rowhead .rar{border:0;min-width:44px;padding:8px 10px;border-radius:12px;font:800 .9rem/1 var(--display);color:#14161b;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--rc) 70%,#fff),var(--rc));box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 3px 0 color-mix(in srgb,var(--rc) 50%,#000),0 0 20px -6px var(--rc)}
+.rowhead small{font:600 .8rem var(--display);color:var(--rc)}
+.rowhead::after{content:"";flex:1;height:3px;border-radius:3px;background:linear-gradient(90deg,var(--rc),transparent)}
+.rail{gap:16px;padding:16px 16px 34px;
+  background:linear-gradient(180deg,transparent calc(100% - 20px),color-mix(in srgb,var(--fg) 26%,transparent) calc(100% - 20px),color-mix(in srgb,var(--fg) 7%,transparent) calc(100% - 17px),color-mix(in srgb,var(--fg) 3%,transparent) calc(100% - 9px),transparent calc(100% - 9px))}
+
+/* Carte */
+.card{--rc:var(--rC);flex:none;width:176px;height:268px;position:relative;display:flex;flex-direction:column;border-radius:16px;overflow:hidden;text-decoration:none;color:#15171c;isolation:isolate;
+  background:linear-gradient(165deg,color-mix(in srgb,var(--rc) 34%,#fff),color-mix(in srgb,var(--rc) 14%,#fff) 60%,color-mix(in srgb,var(--rc) 26%,#fff));
+  box-shadow:inset 0 0 0 3px rgba(255,255,255,.75),0 0 0 2px var(--rc),0 7px 0 -1px color-mix(in srgb,var(--rc) 45%,#000),0 22px 26px -12px rgba(0,0,0,.8)}
+.card.C{--rc:var(--rC)}.card.PC{--rc:var(--rPC)}.card.R{--rc:var(--rR)}.card.SR{--rc:var(--rSR)}.card.UR{--rc:var(--rUR)}.card.L{--rc:var(--rL)}
+.card.UR,.card.L{box-shadow:inset 0 0 0 3px rgba(255,255,255,.8),0 0 0 2px var(--rc),0 7px 0 -1px color-mix(in srgb,var(--rc) 45%,#000),0 0 34px -4px var(--rc),0 22px 26px -12px rgba(0,0,0,.8)}
+.card .pic{position:relative;height:120px;flex:none;margin:6px 6px 0;border-radius:11px 11px 4px 4px;overflow:hidden;background:#20232b;box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
+.card .pic img,.card .ph{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.card .ph{display:grid;place-items:center;font:800 3rem/1 var(--display);color:rgba(255,255,255,.6);background:linear-gradient(160deg,var(--tc,#4a5060),#1b1d24)}
+.card .badge{position:absolute;top:7px;left:7px;font:800 .72rem/1 var(--display);padding:6px 8px;border-radius:9px;color:#14161b;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--rc) 65%,#fff),var(--rc));box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 2px 0 color-mix(in srgb,var(--rc) 50%,#000),0 4px 8px rgba(0,0,0,.4)}
+.card .state{position:absolute;left:50%;bottom:7px;transform:translateX(-50%);white-space:nowrap;font-weight:800;font-size:.72rem;padding:4px 10px;border-radius:999px;color:#fff;background:rgba(15,16,20,.78);backdrop-filter:blur(4px)}
+.card .state.got{background:var(--rPC);color:#0d1a13}
+.card .txt{flex:1;min-height:0;padding:9px 12px 0;display:flex;flex-direction:column;gap:3px}
+.card strong{font:800 .98rem/1.14 var(--body);overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card .desc{margin:0;font-size:.8rem;line-height:1.22;color:#474d5b;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card .foot{margin:0 12px;padding:7px 0 10px;border-top:1px solid rgba(20,22,27,.16);display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:.74rem;font-weight:600;color:#3b414e;min-width:0}
+.card .tg{display:flex;align-items:center;gap:5px;min-width:0}
+.card .tg span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card .tg .dot{box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
+.card .pv{flex:none;font-variant-numeric:tabular-nums;font-weight:800}
+/* Carte que je n'ai pas : grisée et un peu transparente, elle reprend ses couleurs au survol */
+.card.want{filter:grayscale(1);opacity:.66}
+.card.want:hover,.card.want:focus-visible{filter:none;opacity:1}
+.card.UR::after,.card.L::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.55) 48%,transparent 60%) 120% 0/260% 100% no-repeat}
+@media (prefers-reduced-motion: no-preference){
+  .card{transition:transform .16s,filter .2s,opacity .2s}
+  .card:hover{transform:translateY(-6px) rotate(-1.2deg)}
+  .card.UR::after,.card.L::after{transition:background-position .7s}
+  .card.UR:hover::after,.card.L:hover::after{background-position:-40% 0}
+}
 </style>
 </head>
 <body>
@@ -209,7 +286,7 @@ footer button{background:none;border:0;padding:6px 0;color:var(--muted);text-dec
       <datalist id="taglist"></datalist>
       <div class="actions">
         <button class="btn primary" type="submit" id="addbtn">Ajouter</button>
-        <button class="btn quiet" type="button" id="refresh">Compléter images et raretés</button>
+        <button class="btn quiet" type="button" id="refresh">Compléter les infos manquantes</button>
       </div>
       <p class="hint" id="addmsg" role="status"></p>
       <p class="hint">En rareté « Auto », elle est estimée d'après les vues de l'article sur 30 jours et affichée en pointillés. Les cartes de votre collection (relevé du 6 octobre 2026) sont ajoutées cochées, avec leur vraie rareté.</p>
@@ -295,7 +372,7 @@ footer button{background:none;border:0;padding:6px 0;color:var(--muted);text-dec
   var ORDER={L:6,UR:5,SR:4,R:3,PC:2,C:1,"":0};
   var RNAME={L:"Légendaires",UR:"Ultra rares",SR:"Super rares",R:"Rares",PC:"Peu communes",C:"Communes","":"Rareté inconnue"};
   var PALETTE=["#c084fc","#4ade80","#f87171","#60a5fa","#facc15","#fb923c","#2dd4bf","#f472b6","#a3e635","#818cf8"];
-  var PRESETS=[["Automatique",null],["Nuit",{bg:"#0e0f12",fg:"#eceef2",ac:"#ffb224"}],["Jour",{bg:"#f2f3f5",fg:"#15171c",ac:"#ffb224"}],
+  var PRESETS=[["Automatique",null],["Nuit",{bg:"#0e0f12",fg:"#eceef2",ac:"#ffb224"}],["Violette",{bg:"#15112e",fg:"#f4f1ff",ac:"#ffc93c"}],["Jour",{bg:"#f2f3f5",fg:"#15171c",ac:"#ffb224"}],
     ["Sapin",{bg:"#0f1f1a",fg:"#e8f1ec",ac:"#7bd88f"}],["Mirabelle",{bg:"#1c1608",fg:"#f6efd9",ac:"#f2c230"}],["Encre",{bg:"#0d1424",fg:"#e6ecf8",ac:"#6ea8ff"}]];
   var RAR_DARK={C:"#8b93a1",PC:"#3fb37f",R:"#4c9dff",SR:"#b07cff",UR:"#ff7a45",L:"#ffcc33"},RAR_LIGHT={C:"#69717f",PC:"#1f8a5b",R:"#1f6fd6",SR:"#7d47d1",UR:"#d4521c",L:"#b88600"};
   var DKEY="wm-draft",GKEY="wm-github",WIKI="https://fr.wikipedia.org/w/api.php";
@@ -348,19 +425,20 @@ footer button{background:none;border:0;padding:6px 0;color:var(--muted);text-dec
     for(var i=0;i<titles.length;i+=40){
       var part=titles.slice(i,i+40),pages={},alias={},cont={},loops=0;
       do{
-        var data=await wikiGet(Object.assign({action:"query",redirects:"1",prop:"pageimages|pageviews",piprop:"thumbnail",pithumbsize:"330",pilimit:"50",pvipdays:"30",titles:part.join("|")},cont));
+        var data=await wikiGet(Object.assign({action:"query",redirects:"1",prop:"pageimages|pageviews|description",piprop:"thumbnail",pithumbsize:"330",pilimit:"50",pvipdays:"30",titles:part.join("|")},cont));
         var q=data.query||{};
         (q.normalized||[]).concat(q.redirects||[]).forEach(function(n){alias[n.from]=n.to});
         Object.keys(q.pages||{}).forEach(function(id){var p=q.pages[id],o=pages[p.title]=pages[p.title]||{t:p.title,views:{},missing:false};
           if("missing" in p||"invalid" in p)o.missing=true;
           if(p.thumbnail)o.i=p.thumbnail.source;
+          if(p.description)o.d=p.description;
           if(p.pageviews)Object.assign(o.views,p.pageviews)});
         cont=data.continue||null;
       }while(cont&&++loops<8);
       part.forEach(function(t){var to=t,hop=0;while(alias[to]&&hop++<4)to=alias[to];
         var p=pages[to];if(!p){out.set(t,{t:t,missing:true});return}
         var days=Object.keys(p.views),sum=0;days.forEach(function(d){sum+=p.views[d]||0});
-        out.set(t,{t:p.t,i:p.i||"",pv:days.length?sum:null,missing:p.missing})});
+        out.set(t,{t:p.t,i:p.i||"",d:p.d||"",pv:days.length?sum:null,missing:p.missing})});
       if(onProgress)onProgress(Math.min(i+40,titles.length),titles.length);
     }
     return out;
@@ -396,7 +474,7 @@ footer button{background:none;border:0;padding:6px 0;color:var(--muted);text-dec
       bytes=new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer())}
     else if(ver!=="F0")throw new Error("Cette version de code de famille n'est pas prise en charge.");
     var p=JSON.parse(new TextDecoder().decode(bytes));
-    return {name:String(p[0]||""),cards:(p[2]||[]).map(function(c){return {t:String(c[1]||""),r:ORDER[c[2]]?c[2]:"",i:String(c[4]||"")}}).filter(function(c){return c.t})};
+    return {name:String(p[0]||""),cards:(p[2]||[]).map(function(c){return {t:String(c[1]||""),r:ORDER[c[2]]?c[2]:"",i:String(c[4]||""),d:String(c[3]||"")}}).filter(function(c){return c.t})};
   }
 
   /* Ajoute des cartes (titre seul ou déjà renseignées), puis complète ce qui manque via Wikipédia. */
@@ -405,7 +483,7 @@ footer button{background:none;border:0;padding:6px 0;color:var(--muted);text-dec
     var have=new Set(st.cards.map(function(c){return key(c.t)})),added=[],dup=0;
     entries.forEach(function(e){var t=parseTitle(e.t);if(!t)return;
       if(have.has(key(t))){dup++;return}have.add(key(t));
-      var c={id:++st.nid,t:t,g:tag,r:e.r||rar||"",o:0};if(e.i)c.i=e.i;if(!c.r)c.e=1;
+      var c={id:++st.nid,t:t,g:tag,r:e.r||rar||"",o:0};if(e.i)c.i=e.i;if(e.d)c.d=e.d;if(!c.r)c.e=1;
       st.cards.push(c);added.push(c)});
     if(!added.length)return {added:0,dup:dup,own:0,miss:0};
     touch();
@@ -415,7 +493,7 @@ footer button{background:none;border:0;padding:6px 0;color:var(--muted);text-dec
   async function complete(cards,say){
     var own=0,miss=0,info=new Map();
     try{info=await wikiInfo(cards.map(function(c){return c.t}),function(a,b){say("Recherche sur Wikipédia… "+a+" / "+b)})}
-    catch(e){say("Wikipédia ne répond pas : les cartes sont ajoutées sans image. Réessayez avec « Compléter images et raretés ».")}
+    catch(e){say("Wikipédia ne répond pas : les cartes sont ajoutées sans image. Réessayez avec « Compléter les infos manquantes ».")}
     var titles=new Set(st.cards.map(function(c){return key(c.t)}));
     cards.forEach(function(c){var p=info.get(c.t);
       if(p){
@@ -423,6 +501,7 @@ footer button{background:none;border:0;padding:6px 0;color:var(--muted);text-dec
         else{delete c.m;
           if(p.t!==c.t&&(key(p.t)===key(c.t)||!titles.has(key(p.t)))){titles.add(key(p.t));c.t=p.t}
           if(p.i&&!c.i)c.i=p.i;
+          if(!c.d)c.d=p.d||"";
           if(p.pv!=null){c.pv=p.pv;if(c.e||!c.r){c.r=rarityFromViews(p.pv);c.e=1}}}
       }
       var o=OWN&&OWN.get(key(c.t));if(o){c.r=o[1];delete c.e;if(!c.o){c.o=1;own++}}
@@ -433,16 +512,17 @@ footer button{background:none;border:0;padding:6px 0;color:var(--muted);text-dec
   /* ---------- Vue visiteur ---------- */
   var rails=[];
   function cardEl(c){
-    var a=el("a","card "+(c.r||""));a.href=wikiUrl(c.t);a.target="_blank";a.rel="noopener";
-    var tc=tagColor(c.g);
+    var a=el("a","card "+(c.r||"")+(c.o?" own":" want"));a.href=wikiUrl(c.t);a.target="_blank";a.rel="noopener";
+    var tc=tagColor(c.g),pic=el("div","pic");
+    var ph=function(){var p=el("div","ph",c.t.charAt(0).toUpperCase());if(tc)p.style.setProperty("--tc",tc);return p};
     if(c.i){var im=el("img");im.loading="lazy";im.decoding="async";im.referrerPolicy="no-referrer";im.alt="";im.src=c.i;
-      im.onerror=function(){var ph=el("div","ph",c.t.charAt(0).toUpperCase());if(tc)ph.style.setProperty("--tc",tc);im.replaceWith(ph)};a.append(im)}
-    else{var ph=el("div","ph",c.t.charAt(0).toUpperCase());if(tc)ph.style.setProperty("--tc",tc);a.append(ph)}
-    a.append(el("span","badge",c.r||"?"));
-    if(c.o){var ok=el("span","ok","✓");ok.title="Carte obtenue";a.append(ok)}
-    var tx=el("div","txt");tx.append(el("strong",null,c.t));
-    if(c.g){var tg=el("div","tg");tg.append(dot(c.g),el("span",null,c.g));tx.append(tg)}
-    a.append(tx);return a;
+      im.onerror=function(){im.replaceWith(ph())};pic.append(im)}
+    else pic.append(ph());
+    pic.append(el("span","badge",c.r||"?"),el("span","state"+(c.o?" got":""),c.o?"✓ Obtenue":"♡ Souhaitée"));
+    var tx=el("div","txt");tx.append(el("strong",null,c.t));if(c.d)tx.append(el("p","desc",c.d));
+    var ft=el("div","foot"),tg=el("span","tg");if(c.g)tg.append(dot(c.g),el("span",null,c.g));ft.append(tg);
+    if(c.pv!=null)ft.append(el("span","pv",c.pv.toLocaleString("fr-FR")+" vues"));
+    a.append(pic,tx,ft);return a;
   }
   function renderPublic(){
     var want=st.cards.filter(function(c){return !c.o});
@@ -468,7 +548,7 @@ footer button{background:none;border:0;padding:6px 0;color:var(--muted);text-dec
     ["L","UR","SR","R","PC","C",""].forEach(function(r){
       var group=rows.filter(function(c){return (c.r||"")===r});if(!group.length)return;
       group.sort(function(a,b){return key(a.t).localeCompare(key(b.t),"fr")});
-      var head=el("div","rowhead"),h=el("h2");h.append(el("span","rar "+(r||"X"),r||"?"),document.createTextNode(RNAME[r]));
+      var head=el("div","rowhead "+(r||"X")),h=el("h2");h.append(el("span","rar "+(r||"X"),r||"?"),document.createTextNode(RNAME[r]));
       head.append(h,el("small",null,group.length));
       var rail=el("div","rail");group.forEach(function(c){rail.append(cardEl(c))});
       box.append(head,rail);rails.push({el:rail,n:group.length,pos:0,hold:0,loop:false});
@@ -506,7 +586,7 @@ footer button{background:none;border:0;padding:6px 0;color:var(--muted);text-dec
     document.querySelectorAll("[data-for]").forEach(function(l){l.hidden=l.dataset.for.split(" ").indexOf(addMode)<0});
     $("addbtn").textContent={one:"Ajouter",many:"Ajouter la liste",cat:"Importer la catégorie",fam:"Importer la famille"}[addMode];
     $("addbtn").disabled=busy;$("refresh").disabled=busy;
-    $("refresh").hidden=!st.cards.some(function(c){return !c.m&&(!c.i||!c.r)});
+    $("refresh").hidden=!st.cards.some(function(c){return !c.m&&(!c.i||!c.r||c.d==null)});
     var counts={};st.cards.forEach(function(c){var g=c.g||"Sans étiquette";counts[g]=(counts[g]||0)+1});
     var names=st.tags.map(function(t){return t.n}).filter(function(n){return counts[n]});if(counts["Sans étiquette"])names.push("Sans étiquette");
     if(ui.tag&&!counts[ui.tag])ui.tag=null;
@@ -706,7 +786,7 @@ footer button{background:none;border:0;padding:6px 0;color:var(--muted);text-dec
   });
   $("refresh").onclick=async function(){if(busy)return;busy=true;renderCards();
     var say=function(m){$("addmsg").textContent=m};await loadOwned();
-    var todo=st.cards.filter(function(c){return !c.m&&(!c.i||!c.r)});
+    var todo=st.cards.filter(function(c){return !c.m&&(!c.i||!c.r||c.d==null)});
     await complete(todo,say);say(todo.length+" carte"+(todo.length>1?"s vérifiées":" vérifiée")+" sur Wikipédia.");busy=false;renderCards()};
   document.querySelectorAll("[data-s]").forEach(function(b){b.onclick=function(){ui.s=b.dataset.s;keepUi();renderCards()}});
   document.querySelectorAll("[data-r]").forEach(function(b){b.onclick=function(){ui.r=b.dataset.r;renderCards()}});

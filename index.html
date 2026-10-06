@@ -216,6 +216,7 @@ input[type=text],input[type=search],input[type=password],select,textarea{box-sha
 #ptags{zoom:.75}                   /* les boutons d'étiquettes */
 #psub{zoom:.9}                     /* la ligne « possédées · souhaitées » */
 #p-pub>.cloud:not(#ptags){zoom:.8} /* la recherche et le bouton à côté */
+@media (min-width:700px){.ribbon{flex-wrap:wrap;overflow:visible}}
 </style>
 </head>
 <body>
@@ -686,6 +687,7 @@ input[type=text],input[type=search],input[type=password],select,textarea{box-sha
       ck.onclick=function(){c.o=c.o?0:1;touch()};
       var th;if(c.i){th=el("img","thumb");th.loading="lazy";th.referrerPolicy="no-referrer";th.alt="";th.src=c.i}else th=el("div","thumb");
       var main=el("div","main"),a=el("a",null,c.t);a.href=wikiUrl(c.t);a.target="_blank";a.rel="noopener";main.append(a);
+      if(c.d)main.append(el("span",null,c.d));
       var sp=el("span");if(c.g)sp.append(dot(c.g),document.createTextNode(c.g));
       if(c.pv!=null)sp.append(document.createTextNode((c.g?" · ":"")+c.pv.toLocaleString("fr-FR")+" vues/mois"));
       if(c.m)sp.append(el("span","warn","Article introuvable sur Wikipédia"));

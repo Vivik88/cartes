@@ -87,6 +87,8 @@ label{font-size:.8rem;font-weight:600;color:var(--muted);display:flex;flex-direc
 .card strong{font:700 1rem/1.12 var(--display);overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-shadow:0 1px 3px rgba(0,0,0,.8)}
 .card .tg{font-size:.72rem;display:flex;align-items:center;gap:5px;color:rgba(255,255,255,.8);min-width:0}
 .card .tg span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card .ok{position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;background:var(--rPC);color:#111;display:grid;place-items:center;font-weight:600;font-size:.8rem}
+select.pill{width:auto;max-width:100%;border-radius:999px;font-weight:600;font-size:.9rem;min-height:38px;padding:8px 12px;background:var(--surface);cursor:pointer}
 .card:hover{transform:translateY(-3px)}
 @media (prefers-reduced-motion: no-preference){.card{transition:transform .15s}}
 .empty{color:var(--muted);padding:22px 0;margin:0}
@@ -140,7 +142,13 @@ footer button{background:none;border:0;padding:6px 0;color:var(--muted);text-dec
       </div>
       <a class="btn primary" id="friend" target="_blank" rel="noopener" hidden>Ajoutez-moi en ami</a>
     </header>
-    <div class="cloud" id="ptags" role="group" aria-label="Étiquettes"></div>
+    <div class="cloud" id="pbar">
+      <select id="ptag" class="pill" aria-label="Choisir une étiquette"></select>
+      <div class="cloud" role="group" aria-label="Cartes affichées" style="gap:6px">
+        <button class="chip" type="button" data-pm="want">Recherchées</button>
+        <button class="chip" type="button" data-pm="all">Toutes mes cartes</button>
+      </div>
+    </div>
     <input type="search" id="pq" class="narrow" style="margin-inline:0" placeholder="Chercher une carte" aria-label="Chercher une carte">
     <div id="rows"></div>
     <footer>
@@ -279,7 +287,7 @@ footer button{background:none;border:0;padding:6px 0;color:var(--muted);text-dec
   var clone=function(o){return JSON.parse(JSON.stringify(o))};
   var EMPTY={v:1,title:"",pseudo:"",theme:null,tags:[],nid:0,cards:[]};
   var saved=clone(EMPTY),st=clone(EMPTY),sha=null,loaded=false,dirty=false,owner=false,openId=null,addMode="one",busy=false;
-  var ui={tab:"cards",tag:null,s:"todo",r:"",q:"",sort:"title"},pv={tag:null,q:""};
+  var ui={tab:"cards",tag:null,s:"todo",r:"",q:"",sort:"title"},pv={tag:null,q:"",mode:"want"};
   var ORDER={L:6,UR:5,SR:4,R:3,PC:2,C:1,"":0};
   var RNAME={L:"Légendaires",UR:"Ultra rares",SR:"Super rares",R:"Rares",PC:"Peu communes",C:"Communes","":"Rareté inconnue"};
   var PALETTE=["#c084fc","#4ade80","#f87171","#60a5fa","#facc15","#fb923c","#2dd4bf","#f472b6","#a3e635","#818cf8"];
@@ -427,6 +435,7 @@ footer button{background:none;border:0;padding:6px 0;color:var(--muted);text-dec
       im.onerror=function(){var ph=el("div","ph",c.t.charAt(0).toUpperCase());if(tc)ph.style.setProperty("--tc",tc);im.replaceWith(ph)};a.append(im)}
     else{var ph=el("div","ph",c.t.charAt(0).toUpperCase());if(tc)ph.style.setProperty("--tc",tc);a.append(ph)}
     a.append(el("span","badge",c.r||"?"));
+    if(c.o){var ok=el("span","ok","✓");ok.title="Carte obtenue";a.append(ok)}
     var tx=el("div","txt");tx.append(el("strong",null,c.t));
     if(c.g){var tg=el("div","tg");tg.append(dot(c.g),el("span",null,c.g));tx.append(tg)}
     a.append(tx);return a;
@@ -435,19 +444,21 @@ footer button{background:none;border:0;padding:6px 0;color:var(--muted);text-dec
     var want=st.cards.filter(function(c){return !c.o});
     if(!loaded)return;
     $("h1").textContent=st.title||"Cartes recherchées";document.title=st.title||"Cartes recherchées Wiki Masters";
-    var ps=$("psub");ps.textContent="";ps.append(el("b",null,want.length)," carte"+(want.length>1?"s":"")+" Wiki Masters recherchée"+(want.length>1?"s":""));
+    var got=st.cards.length-want.length,base=pv.mode==="all"?st.cards:want;
+    var ps=$("psub");ps.textContent="";ps.append(el("b",null,want.length)," carte"+(want.length>1?"s":"")+" recherchée"+(want.length>1?"s":""));
+    if(got)ps.append(" · ",el("b",null,got)," obtenue"+(got>1?"s":""));
     var f=$("friend");f.hidden=!st.pseudo;if(st.pseudo)f.href="https://www.wiki-masters.com/profile/"+encodeURIComponent(st.pseudo);
-    var counts={};want.forEach(function(c){if(c.g)counts[c.g]=(counts[c.g]||0)+1});
-    var names=st.tags.map(function(t){return t.n}).filter(function(n){return counts[n]});
-    if(pv.tag&&!counts[pv.tag])pv.tag=null;
-    var pt=$("ptags");pt.textContent="";pt.hidden=names.length<2;
-    [null].concat(names).forEach(function(n){var b=el("button","chip");b.type="button";
-      if(n)b.append(dot(n));b.append(el("span","nm",n||"Toutes"),el("small",null,n?counts[n]:want.length));
-      b.setAttribute("aria-pressed",pv.tag===n?"true":"false");
-      b.onclick=function(){pv.tag=n;renderPublic()};pt.append(b)});
-    var q=key(pv.q),rows=want.filter(function(c){return (!pv.tag||c.g===pv.tag)&&(!q||key(c.t).indexOf(q)>=0)});
+    document.querySelectorAll("[data-pm]").forEach(function(b){b.setAttribute("aria-pressed",b.dataset.pm===pv.mode?"true":"false")});
+    /* Le menu des étiquettes est reconstruit à chaque affichage à partir du catalogue : créer, renommer ou supprimer une étiquette le met à jour. */
+    var counts={};base.forEach(function(c){if(c.g)counts[c.g]=(counts[c.g]||0)+1});
+    if(pv.tag&&!st.tags.some(function(t){return t.n===pv.tag}))pv.tag=null;
+    var sel=$("ptag");sel.textContent="";sel.hidden=!st.tags.length;
+    var o0=el("option",null,"Toutes les étiquettes ("+base.length+")");o0.value="";sel.append(o0);
+    st.tags.forEach(function(t){var o=el("option",null,t.n+" ("+(counts[t.n]||0)+")");o.value=t.n;sel.append(o)});
+    sel.value=pv.tag||"";
+    var q=key(pv.q),rows=base.filter(function(c){return (!pv.tag||c.g===pv.tag)&&(!q||key(c.t).indexOf(q)>=0)});
     var box=$("rows");box.textContent="";rails=[];
-    if(!rows.length){box.append(el("p","empty",!want.length?"Aucune carte recherchée pour l'instant.":"Aucune carte ne correspond."));return}
+    if(!rows.length){box.append(el("p","empty",q?"Aucune carte ne correspond à cette recherche.":pv.tag?(pv.mode==="all"?"Cette étiquette ne contient pas encore de carte.":"Aucune carte recherchée dans cette étiquette."):(pv.mode==="all"?"Aucune carte pour l'instant.":"Aucune carte recherchée pour l'instant.")));return}
     ["L","UR","SR","R","PC","C",""].forEach(function(r){
       var group=rows.filter(function(c){return (c.r||"")===r});if(!group.length)return;
       group.sort(function(a,b){return key(a.t).localeCompare(key(b.t),"fr")});
@@ -641,6 +652,8 @@ footer button{background:none;border:0;padding:6px 0;color:var(--muted);text-dec
   /* ---------- Événements ---------- */
   document.querySelectorAll("[data-tab]").forEach(function(b){b.onclick=function(){ui.tab=b.dataset.tab;keepUi();render();window.scrollTo(0,0)}});
   $("pq").addEventListener("input",function(){pv.q=this.value;renderPublic()});
+  $("ptag").addEventListener("change",function(){pv.tag=this.value||null;renderPublic()});
+  document.querySelectorAll("[data-pm]").forEach(function(b){b.onclick=function(){pv.mode=b.dataset.pm;renderPublic()}});
   $("manage").onclick=function(){var g=gh||guessRepo();$("gh-owner").value=g.owner||"";$("gh-repo").value=g.repo||"";$("gh-token").value="";$("loginmsg").textContent="";view="login";render();window.scrollTo(0,0)};
   $("logincancel").onclick=function(){view="pub";render()};
   $("login").addEventListener("submit",async function(ev){ev.preventDefault();

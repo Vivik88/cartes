@@ -1,0 +1,724 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Cartes recherchées Wiki Masters</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700&family=Instrument+Sans:wght@400;600&display=swap">
+<style>
+/* Visiteurs : étiquettes, recherche, rangées de cartes qui défilent par rareté. Propriétaire : onglets de gestion et barre d'enregistrement. */
+:root{
+  --bg:#0e0f12; --fg:#eceef2; --accent:#ffb224; --on-accent:#1d1400; --danger:#ff6b6b;
+  --rC:#8b93a1; --rPC:#3fb37f; --rR:#4c9dff; --rSR:#b07cff; --rUR:#ff7a45; --rL:#ffcc33;
+  --surface:color-mix(in srgb,var(--bg) 93%,var(--fg)); --line:color-mix(in srgb,var(--bg) 82%,var(--fg)); --muted:color-mix(in srgb,var(--fg) 62%,var(--bg));
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){ :root:not([data-fixed]){
+  --bg:#f2f3f5; --fg:#15171c; --danger:#c62828;
+  --rC:#69717f; --rPC:#1f8a5b; --rR:#1f6fd6; --rSR:#7d47d1; --rUR:#d4521c; --rL:#b88600; color-scheme:light } }
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 16px/1.45 var(--body);
+  padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
+.wrap{max-width:980px;margin:0 auto;padding-inline:16px;padding-block:22px 130px;display:flex;flex-direction:column;gap:18px}
+.narrow{max-width:760px;margin-inline:auto;width:100%}
+.panel{display:flex;flex-direction:column;gap:16px}
+h1{font:700 clamp(1.8rem,7vw,2.8rem)/1.05 var(--display);margin:0;text-wrap:balance;overflow-wrap:anywhere}
+h2{font:700 1.15rem/1.2 var(--display);margin:0}
+.sub{margin:6px 0 0;color:var(--muted);font-variant-numeric:tabular-nums}
+.sub b{color:var(--fg)}
+header{display:flex;flex-direction:column;gap:12px;align-items:flex-start}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.btn{font-weight:600;padding:11px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);cursor:pointer;min-height:44px;text-decoration:none;color:var(--fg);display:inline-block}
+.btn.primary{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.btn.quiet{background:transparent}
+.btn.danger{color:var(--danger)}
+.btn[disabled]{opacity:.5;cursor:default}
+input[type=text],input[type=search],input[type=password],select,textarea{width:100%;min-width:0;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);min-height:44px}
+input[type=color]{flex:none;width:44px;height:44px;padding:3px;border-radius:10px;border:1px solid var(--line);background:var(--bg);cursor:pointer}
+textarea{min-height:120px;resize:vertical}
+label{font-size:.8rem;font-weight:600;color:var(--muted);display:flex;flex-direction:column;gap:5px;min-width:0}
+.hint{font-size:.85rem;color:var(--muted);margin:0}
+.hint a{color:var(--fg)}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.two{display:grid;grid-template-columns:1fr 110px;gap:10px}
+.actions{display:flex;flex-wrap:wrap;gap:10px}
+.actions .btn.primary{flex:1 1 150px}
+
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px}
+.tabs button{border:0;background:transparent;border-radius:9px;padding:10px 4px;font-weight:600;font-size:.88rem;cursor:pointer;color:var(--muted);min-height:42px}
+.tabs button[aria-selected="true"]{background:var(--fg);color:var(--bg)}
+
+.ribbon{display:flex;gap:8px;overflow-x:auto;margin-inline:-16px;padding:2px 16px;scrollbar-width:none}
+.ribbon::-webkit-scrollbar{display:none}
+.cloud{display:flex;flex-wrap:wrap;gap:8px}
+.chip{flex:none;font-weight:600;font-size:.9rem;padding:8px 12px;border-radius:999px;border:1px solid var(--line);background:transparent;cursor:pointer;white-space:nowrap;min-height:38px;display:inline-flex;align-items:center;gap:7px;max-width:100%}
+.chip .nm{overflow:hidden;text-overflow:ellipsis}
+.chip small{font-weight:400;color:var(--muted);font-variant-numeric:tabular-nums}
+.chip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.chip[aria-pressed="true"] small{color:inherit;opacity:.7}
+.dot{flex:none;width:10px;height:10px;border-radius:50%;background:var(--muted)}
+.tools{display:grid;grid-template-columns:1fr 150px;gap:10px}
+.rar{flex:none;font-weight:600;font-size:.8rem;min-width:34px;text-align:center;padding:4px 6px;border-radius:6px;border:1.5px solid currentColor}
+.rar.C{color:var(--rC)}.rar.PC{color:var(--rPC)}.rar.R{color:var(--rR)}.rar.SR{color:var(--rSR)}.rar.UR{color:var(--rUR)}.rar.L{color:var(--rL)}.rar.X{color:var(--muted);border-style:dashed}
+.rar.est{border-style:dashed}
+
+/* Rangées de cartes */
+.rowhead{display:flex;align-items:baseline;gap:10px;margin:6px 0 0}
+.rowhead h2{display:flex;align-items:center;gap:8px}
+.rowhead small{color:var(--muted);font-variant-numeric:tabular-nums}
+.rail{display:flex;gap:12px;overflow-x:auto;margin-inline:-16px;padding:6px 16px 12px;scrollbar-width:none;overscroll-behavior-x:contain}
+.rail::-webkit-scrollbar{display:none}
+.card{--rc:var(--muted);flex:none;width:150px;aspect-ratio:5/7;position:relative;border-radius:12px;overflow:hidden;background:var(--surface);
+  border:2px solid var(--rc);text-decoration:none;color:#fff;display:flex;flex-direction:column;justify-content:flex-end;isolation:isolate}
+.card.C{--rc:var(--rC)}.card.PC{--rc:var(--rPC)}.card.R{--rc:var(--rR)}.card.SR{--rc:var(--rSR)}.card.UR{--rc:var(--rUR)}.card.L{--rc:var(--rL)}
+.card.UR,.card.L{box-shadow:0 0 18px -4px var(--rc)}
+.card img,.card .ph{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2}
+.card .ph{display:grid;place-items:center;font:700 3.4rem/1 var(--display);color:rgba(255,255,255,.55);background:linear-gradient(160deg,var(--tc,#3a3f4b),#15171c)}
+.card::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(to top,rgba(0,0,0,.9) 0%,rgba(0,0,0,.55) 32%,transparent 58%)}
+.card .badge{position:absolute;top:8px;left:8px;font-weight:600;font-size:.75rem;padding:3px 7px;border-radius:6px;background:var(--rc);color:#111}
+.card .txt{padding:10px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.card strong{font:700 1rem/1.12 var(--display);overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-shadow:0 1px 3px rgba(0,0,0,.8)}
+.card .tg{font-size:.72rem;display:flex;align-items:center;gap:5px;color:rgba(255,255,255,.8);min-width:0}
+.card .tg span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card:hover{transform:translateY(-3px)}
+@media (prefers-reduced-motion: no-preference){.card{transition:transform .15s}}
+.empty{color:var(--muted);padding:22px 0;margin:0}
+footer{margin-top:20px;font-size:.8rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
+footer button{background:none;border:0;padding:6px 0;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:inherit}
+
+/* Gestion */
+#list{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.item{border-bottom:1px solid var(--line);padding:10px 0;display:flex;flex-direction:column;gap:10px}
+.line{display:flex;align-items:center;gap:10px;min-width:0}
+.check{flex:none;width:30px;height:30px;border-radius:50%;border:2px solid var(--line);background:transparent;cursor:pointer;display:grid;place-items:center;font-weight:600;color:transparent}
+.item.got .check{background:var(--rPC);border-color:var(--rPC);color:var(--bg)}
+.thumb{flex:none;width:40px;height:52px;border-radius:6px;object-fit:cover;background:var(--surface);border:1px solid var(--line)}
+.main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.main a{color:var(--fg);font-weight:600;text-decoration:none;overflow-wrap:anywhere}
+.item.got .main a{color:var(--muted);text-decoration:line-through}
+.main span{font-size:.82rem;color:var(--muted);overflow-wrap:anywhere;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.warn{color:var(--danger)}
+.more,.ico{flex:none;width:40px;height:40px;border-radius:8px;border:1px solid transparent;background:transparent;cursor:pointer;color:var(--muted);font-size:1.1rem}
+.ico{border-color:var(--line)}
+.ico[disabled]{opacity:.3;cursor:default}
+.editor{display:flex;flex-direction:column;gap:10px;padding:0 0 4px 40px}
+.sugg{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.sugg button{text-align:left;background:var(--bg);border:0;border-bottom:1px solid var(--line);padding:10px 12px;cursor:pointer;min-height:42px}
+.sugg button:last-child{border-bottom:0}
+.trow{display:flex;align-items:center;gap:8px;min-width:0;padding:8px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.trow input[type=text]{flex:1 1 150px}
+.trow .n{flex:none;min-width:28px;text-align:right;color:var(--muted);font-size:.85rem;font-variant-numeric:tabular-nums}
+.colors{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.colors label{align-items:flex-start}
+.swatch{flex:none;width:18px;height:18px;border-radius:50%;border:1px solid var(--line)}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);z-index:5;
+  padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;align-items:center;justify-content:center}
+.bar span{flex:1;min-width:0;font-size:.9rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <div class="tabs narrow" id="tabs" role="tablist" aria-label="Gestion" hidden>
+    <button type="button" role="tab" data-tab="cards">Mes cartes</button>
+    <button type="button" role="tab" data-tab="tags">Étiquettes</button>
+    <button type="button" role="tab" data-tab="look">Apparence</button>
+    <button type="button" role="tab" data-tab="pub">Aperçu</button>
+  </div>
+
+  <section class="panel" id="p-pub">
+    <header>
+      <div>
+        <h1 id="h1">Cartes recherchées</h1>
+        <p class="sub" id="psub">Chargement…</p>
+      </div>
+      <a class="btn primary" id="friend" target="_blank" rel="noopener" hidden>Ajoutez-moi en ami</a>
+    </header>
+    <div class="cloud" id="ptags" role="group" aria-label="Étiquettes"></div>
+    <input type="search" id="pq" class="narrow" style="margin-inline:0" placeholder="Chercher une carte" aria-label="Chercher une carte">
+    <div id="rows"></div>
+    <footer>
+      <span>Images et textes issus de Wikipédia, sous licence libre.</span>
+      <button type="button" id="manage">Gérer</button>
+    </footer>
+  </section>
+
+  <section class="panel narrow" id="p-login" hidden>
+    <h1>Connexion</h1>
+    <form class="box" id="login" autocomplete="off">
+      <p class="hint">Pour modifier la liste, cette page a besoin d'une clé d'accès GitHub limitée à ce dépôt. Elle reste enregistrée sur cet appareil uniquement.</p>
+      <label>Compte GitHub <input type="text" id="gh-owner" autocapitalize="off" spellcheck="false"></label>
+      <label>Dépôt <input type="text" id="gh-repo" autocapitalize="off" spellcheck="false"></label>
+      <label>Clé d'accès (commence par github_pat_) <input type="password" id="gh-token" autocomplete="off"></label>
+      <div class="actions">
+        <button class="btn primary" type="submit" id="loginbtn">Se connecter</button>
+        <button class="btn quiet" type="button" id="logincancel">Retour</button>
+      </div>
+      <p class="hint" id="loginmsg" role="status"></p>
+    </form>
+  </section>
+
+  <section class="panel narrow" id="p-cards" hidden>
+    <p class="sub" id="sub" style="margin:0"></p>
+    <form class="box" id="add" autocomplete="off">
+      <div class="ribbon" role="group" aria-label="Façon d'ajouter" style="margin-inline:-14px;padding-inline:14px">
+        <button class="chip" type="button" data-m="one">Une carte</button>
+        <button class="chip" type="button" data-m="many">Une liste</button>
+        <button class="chip" type="button" data-m="cat">Catégorie Wikipédia</button>
+        <button class="chip" type="button" data-m="fam">Code de famille</button>
+      </div>
+      <label data-for="one">Titre de la carte (article Wikipédia)
+        <input type="text" id="title" placeholder="Ex. Gérardmer" enterkeyhint="done">
+      </label>
+      <div class="sugg" id="sugg" hidden></div>
+      <label data-for="many" hidden>Une carte par ligne (titres ou liens Wikipédia)
+        <textarea id="many" placeholder="Gérardmer&#10;La Bresse&#10;https://fr.wikipedia.org/wiki/Remiremont"></textarea>
+      </label>
+      <label data-for="cat" hidden>Nom ou lien de la catégorie Wikipédia
+        <input type="text" id="cat" placeholder="Ex. Commune dans le département des Vosges">
+      </label>
+      <label data-for="fam" hidden>Code exporté depuis la page « Familles » de l'addon
+        <textarea id="fam" placeholder="F1.…"></textarea>
+      </label>
+      <div class="two">
+        <label>Étiquette
+          <input type="text" id="tag" list="taglist" placeholder="Ex. Vosges">
+        </label>
+        <label data-for="one many">Rareté
+          <select id="rar"><option value="">Auto</option><option>C</option><option>PC</option><option>R</option><option>SR</option><option>UR</option><option>L</option></select>
+        </label>
+      </div>
+      <datalist id="taglist"></datalist>
+      <div class="actions">
+        <button class="btn primary" type="submit" id="addbtn">Ajouter</button>
+        <button class="btn quiet" type="button" id="refresh">Compléter images et raretés</button>
+      </div>
+      <p class="hint" id="addmsg" role="status"></p>
+      <p class="hint">En rareté « Auto », elle est estimée d'après les vues de l'article sur 30 jours et affichée en pointillés. Les cartes de votre collection (relevé du 6 octobre 2026) sont ajoutées cochées, avec leur vraie rareté.</p>
+    </form>
+    <div class="ribbon" id="tags" role="group" aria-label="Étiquettes"></div>
+    <div class="ribbon" role="group" aria-label="État et rareté">
+      <button class="chip" type="button" data-s="todo">À trouver</button>
+      <button class="chip" type="button" data-s="got">Obtenues</button>
+      <button class="chip" type="button" data-s="all">Toutes</button>
+      <span style="flex:none;width:8px"></span>
+      <button class="chip" type="button" data-r="">Toutes raretés</button>
+      <button class="chip" type="button" data-r="L">L</button>
+      <button class="chip" type="button" data-r="UR">UR</button>
+      <button class="chip" type="button" data-r="SR">SR</button>
+      <button class="chip" type="button" data-r="R">R</button>
+      <button class="chip" type="button" data-r="PC">PC</button>
+      <button class="chip" type="button" data-r="C">C</button>
+    </div>
+    <div class="tools">
+      <input type="search" id="q" placeholder="Chercher" aria-label="Chercher une carte">
+      <select id="sort" aria-label="Trier">
+        <option value="title">Titre A→Z</option>
+        <option value="rar">Rareté</option>
+        <option value="new">Ajout récent</option>
+        <option value="tag">Étiquette</option>
+      </select>
+    </div>
+    <div id="list"></div>
+  </section>
+
+  <section class="panel narrow" id="p-tags" hidden>
+    <form class="box" id="newtag" autocomplete="off">
+      <label>Nouvelle étiquette
+        <input type="text" id="newtagname" placeholder="Ex. Vosges" maxlength="60">
+      </label>
+      <button class="btn primary" type="submit">Créer</button>
+    </form>
+    <p class="hint">Touchez la pastille pour changer la couleur, le nom pour le modifier, les flèches pour l'ordre d'affichage. Les visiteurs ne voient que les étiquettes qui contiennent au moins une carte à trouver.</p>
+    <div id="taglistui"></div>
+  </section>
+
+  <section class="panel narrow" id="p-look" hidden>
+    <div class="box">
+      <label>Titre de la page
+        <input type="text" id="ptitle" maxlength="60" placeholder="Cartes recherchées">
+      </label>
+      <label>Votre pseudo Wiki Masters (affiche le bouton « Ajoutez-moi en ami »)
+        <input type="text" id="pseudo" maxlength="40" placeholder="Laisser vide pour masquer le bouton">
+      </label>
+    </div>
+    <div class="box">
+      <h2>Couleurs</h2>
+      <div class="cloud" id="presets"></div>
+      <div class="colors">
+        <label>Fond <input type="color" id="c-bg"></label>
+        <label>Texte <input type="color" id="c-fg"></label>
+        <label>Accent <input type="color" id="c-ac"></label>
+      </div>
+      <p class="hint" id="lookmsg"></p>
+    </div>
+    <div class="box">
+      <h2>Connexion</h2>
+      <p class="hint" id="ghinfo"></p>
+      <button class="btn quiet danger" type="button" id="logout">Se déconnecter de cet appareil</button>
+    </div>
+  </section>
+</div>
+
+<div class="bar" id="bar" hidden>
+  <span id="barmsg"></span>
+  <button class="btn quiet" id="undo" type="button">Annuler</button>
+  <button class="btn primary" id="save" type="button">Enregistrer</button>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var $=function(id){return document.getElementById(id)};
+  var clone=function(o){return JSON.parse(JSON.stringify(o))};
+  var EMPTY={v:1,title:"",pseudo:"",theme:null,tags:[],nid:0,cards:[]};
+  var saved=clone(EMPTY),st=clone(EMPTY),sha=null,loaded=false,dirty=false,owner=false,openId=null,addMode="one",busy=false;
+  var ui={tab:"cards",tag:null,s:"todo",r:"",q:"",sort:"title"},pv={tag:null,q:""};
+  var ORDER={L:6,UR:5,SR:4,R:3,PC:2,C:1,"":0};
+  var RNAME={L:"Légendaires",UR:"Ultra rares",SR:"Super rares",R:"Rares",PC:"Peu communes",C:"Communes","":"Rareté inconnue"};
+  var PALETTE=["#c084fc","#4ade80","#f87171","#60a5fa","#facc15","#fb923c","#2dd4bf","#f472b6","#a3e635","#818cf8"];
+  var PRESETS=[["Automatique",null],["Nuit",{bg:"#0e0f12",fg:"#eceef2",ac:"#ffb224"}],["Jour",{bg:"#f2f3f5",fg:"#15171c",ac:"#ffb224"}],
+    ["Sapin",{bg:"#0f1f1a",fg:"#e8f1ec",ac:"#7bd88f"}],["Mirabelle",{bg:"#1c1608",fg:"#f6efd9",ac:"#f2c230"}],["Encre",{bg:"#0d1424",fg:"#e6ecf8",ac:"#6ea8ff"}]];
+  var RAR_DARK={C:"#8b93a1",PC:"#3fb37f",R:"#4c9dff",SR:"#b07cff",UR:"#ff7a45",L:"#ffcc33"},RAR_LIGHT={C:"#69717f",PC:"#1f8a5b",R:"#1f6fd6",SR:"#7d47d1",UR:"#d4521c",L:"#b88600"};
+  var DKEY="wm-draft",GKEY="wm-github",WIKI="https://fr.wikipedia.org/w/api.php";
+  var key=function(s){return String(s).normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/\s+/g," ").trim()};
+  var OWN=null;
+  function ls(k,v){try{if(v===undefined)return JSON.parse(localStorage.getItem(k)||"null");if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,JSON.stringify(v))}catch(e){}return null}
+  var gh=ls(GKEY);
+  function el(tag,cls,text){var e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e}
+  function rarityFromViews(n){return n>=20000?"L":n>=5000?"UR":n>=1000?"SR":n>=250?"R":n>=50?"PC":"C"}
+  function wikiUrl(t){return "https://fr.wikipedia.org/wiki/"+encodeURIComponent(t.replace(/ /g,"_"))}
+  function tagColor(n){var t=st.tags.find(function(x){return x.n===n});return t?t.c:null}
+  function dot(n){var d=el("span","dot");var c=tagColor(n);if(c)d.style.background=c;return d}
+  function lum(hex){var n=parseInt(hex.slice(1),16),f=function(v){v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)};
+    return .2126*f(n>>16&255)+.7152*f(n>>8&255)+.0722*f(n&255)}
+  function cssHex(name){var v=getComputedStyle(document.documentElement).getPropertyValue(name).trim();return /^#[0-9a-f]{6}$/i.test(v)?v:"#000000"}
+
+  function normalize(s){
+    s.cards=s.cards||[];s.title=s.title||"";s.pseudo=s.pseudo||"";s.theme=s.theme||null;s.nid=s.nid||0;
+    var seen=new Set(),tags=[];
+    (s.tags||[]).forEach(function(t,i){var o=typeof t==="string"?{n:t,c:PALETTE[i%PALETTE.length]}:t;
+      if(o&&o.n&&!seen.has(o.n)){seen.add(o.n);tags.push({n:o.n,c:o.c||PALETTE[tags.length%PALETTE.length]})}});
+    s.cards.forEach(function(c){if(c.g&&!seen.has(c.g)){seen.add(c.g);tags.push({n:c.g,c:PALETTE[tags.length%PALETTE.length]})}
+      if(c.id>s.nid)s.nid=c.id});
+    s.tags=tags;return s;
+  }
+  function touch(){normalize(st);dirty=true;ls(DKEY,{sha:sha,st:st});render()}
+  function keepUi(){try{sessionStorage.setItem("wm-ui",JSON.stringify({s:ui.s,sort:ui.sort,tag:ui.tag,tab:ui.tab}))}catch(e){}}
+  try{var u=JSON.parse(sessionStorage.getItem("wm-ui")||"null");if(u){ui.s=u.s||"todo";ui.sort=u.sort||"title";ui.tag=u.tag||null;ui.tab=u.tab||"cards"}}catch(e){}
+
+  function applyTheme(){
+    var root=document.documentElement,r=root.style,t=st.theme;
+    var names=["--bg","--fg","--accent","--on-accent","--danger","color-scheme","--rC","--rPC","--rR","--rSR","--rUR","--rL"];
+    if(!t){names.forEach(function(n){r.removeProperty(n)});root.removeAttribute("data-fixed");return}
+    var dark=lum(t.bg)<.4,rar=dark?RAR_DARK:RAR_LIGHT;root.setAttribute("data-fixed","");
+    r.setProperty("--bg",t.bg);r.setProperty("--fg",t.fg);r.setProperty("--accent",t.ac);
+    r.setProperty("--on-accent",lum(t.ac)>.4?"#15171c":"#ffffff");
+    r.setProperty("--danger",dark?"#ff6b6b":"#c62828");r.setProperty("color-scheme",dark?"dark":"light");
+    Object.keys(rar).forEach(function(k){r.setProperty("--r"+k,rar[k])});
+  }
+
+  /* ---------- Wikipédia ---------- */
+  async function wikiGet(params){
+    var u=new URL(WIKI);Object.keys(params).forEach(function(k){u.searchParams.set(k,params[k])});
+    u.searchParams.set("format","json");u.searchParams.set("origin","*");
+    var r=await fetch(u.toString());if(!r.ok)throw new Error("Wikipédia a répondu "+r.status);return r.json();
+  }
+  /* Pour chaque titre demandé : titre exact, image, vues sur 30 jours. */
+  async function wikiInfo(titles,onProgress){
+    var out=new Map();
+    for(var i=0;i<titles.length;i+=40){
+      var part=titles.slice(i,i+40),pages={},alias={},cont={},loops=0;
+      do{
+        var data=await wikiGet(Object.assign({action:"query",redirects:"1",prop:"pageimages|pageviews",piprop:"thumbnail",pithumbsize:"330",pilimit:"50",pvipdays:"30",titles:part.join("|")},cont));
+        var q=data.query||{};
+        (q.normalized||[]).concat(q.redirects||[]).forEach(function(n){alias[n.from]=n.to});
+        Object.keys(q.pages||{}).forEach(function(id){var p=q.pages[id],o=pages[p.title]=pages[p.title]||{t:p.title,views:{},missing:false};
+          if("missing" in p||"invalid" in p)o.missing=true;
+          if(p.thumbnail)o.i=p.thumbnail.source;
+          if(p.pageviews)Object.assign(o.views,p.pageviews)});
+        cont=data.continue||null;
+      }while(cont&&++loops<8);
+      part.forEach(function(t){var to=t,hop=0;while(alias[to]&&hop++<4)to=alias[to];
+        var p=pages[to];if(!p){out.set(t,{t:t,missing:true});return}
+        var days=Object.keys(p.views),sum=0;days.forEach(function(d){sum+=p.views[d]||0});
+        out.set(t,{t:p.t,i:p.i||"",pv:days.length?sum:null,missing:p.missing})});
+      if(onProgress)onProgress(Math.min(i+40,titles.length),titles.length);
+    }
+    return out;
+  }
+  async function wikiCategory(name){
+    var m=name.match(/wikipedia\.org\/wiki\/([^?#\s]+)/i);if(m){try{name=decodeURIComponent(m[1])}catch(e){name=m[1]}}
+    name=name.replace(/_/g," ").replace(/^(Cat[ée]gorie|Category)\s*:\s*/i,"").trim();
+    var titles=[],cont={},loops=0;
+    do{
+      var data=await wikiGet(Object.assign({action:"query",list:"categorymembers",cmtitle:"Catégorie:"+name,cmnamespace:"0",cmlimit:"500"},cont));
+      ((data.query||{}).categorymembers||[]).forEach(function(p){titles.push(p.title)});
+      cont=data.continue||null;
+    }while(cont&&++loops<6);
+    return titles;
+  }
+  async function loadOwned(){
+    if(OWN)return;OWN=new Map();
+    try{var r=await fetch("owned.json");if(!r.ok)return;var ow=(await r.json()).r;
+      Object.keys(ow).forEach(function(rr){ow[rr].forEach(function(t){OWN.set(key(t),[t,rr])})})}catch(e){}
+  }
+  function parseTitle(line){
+    var s=String(line).trim();if(!s)return "";
+    var m=s.match(/wikipedia\.org\/wiki\/([^?#\s]+)/i);
+    if(m){try{s=decodeURIComponent(m[1])}catch(e){s=m[1]}s=s.replace(/_/g," ")}
+    return s.replace(/\s+/g," ").slice(0,200);
+  }
+  function b64urlBytes(v){v=v.replace(/-/g,"+").replace(/_/g,"/");v+="=".repeat((4-(v.length%4||4))%4);
+    var bin=atob(v),b=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)b[i]=bin.charCodeAt(i);return b}
+  async function decodeFamily(code){
+    code=code.replace(/\s+/g,"");var dotp=code.indexOf(".");if(dotp<1)throw new Error("Ce code de famille n'est pas reconnu.");
+    var ver=code.slice(0,dotp),bytes=b64urlBytes(code.slice(dotp+1));
+    if(ver==="F1"){if(typeof DecompressionStream!=="function")throw new Error("Ce navigateur ne sait pas lire les codes compressés.");
+      bytes=new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer())}
+    else if(ver!=="F0")throw new Error("Cette version de code de famille n'est pas prise en charge.");
+    var p=JSON.parse(new TextDecoder().decode(bytes));
+    return {name:String(p[0]||""),cards:(p[2]||[]).map(function(c){return {t:String(c[1]||""),r:ORDER[c[2]]?c[2]:"",i:String(c[4]||"")}}).filter(function(c){return c.t})};
+  }
+
+  /* Ajoute des cartes (titre seul ou déjà renseignées), puis complète ce qui manque via Wikipédia. */
+  async function addEntries(entries,tag,rar,say){
+    await loadOwned();
+    var have=new Set(st.cards.map(function(c){return key(c.t)})),added=[],dup=0;
+    entries.forEach(function(e){var t=parseTitle(e.t);if(!t)return;
+      if(have.has(key(t))){dup++;return}have.add(key(t));
+      var c={id:++st.nid,t:t,g:tag,r:e.r||rar||"",o:0};if(e.i)c.i=e.i;if(!c.r)c.e=1;
+      st.cards.push(c);added.push(c)});
+    if(!added.length)return {added:0,dup:dup,own:0,miss:0};
+    touch();
+    var res=await complete(added,say);
+    return {added:added.length,dup:dup,own:res.own,miss:res.miss};
+  }
+  async function complete(cards,say){
+    var own=0,miss=0,info=new Map();
+    try{info=await wikiInfo(cards.map(function(c){return c.t}),function(a,b){say("Recherche sur Wikipédia… "+a+" / "+b)})}
+    catch(e){say("Wikipédia ne répond pas : les cartes sont ajoutées sans image. Réessayez avec « Compléter images et raretés ».")}
+    var titles=new Set(st.cards.map(function(c){return key(c.t)}));
+    cards.forEach(function(c){var p=info.get(c.t);
+      if(p){
+        if(p.missing){c.m=1;miss++}
+        else{delete c.m;
+          if(p.t!==c.t&&(key(p.t)===key(c.t)||!titles.has(key(p.t)))){titles.add(key(p.t));c.t=p.t}
+          if(p.i&&!c.i)c.i=p.i;
+          if(p.pv!=null){c.pv=p.pv;if(c.e||!c.r){c.r=rarityFromViews(p.pv);c.e=1}}}
+      }
+      var o=OWN&&OWN.get(key(c.t));if(o){c.r=o[1];delete c.e;if(!c.o){c.o=1;own++}}
+    });
+    touch();return {own:own,miss:miss};
+  }
+
+  /* ---------- Vue visiteur ---------- */
+  var rails=[];
+  function cardEl(c){
+    var a=el("a","card "+(c.r||""));a.href=wikiUrl(c.t);a.target="_blank";a.rel="noopener";
+    var tc=tagColor(c.g);
+    if(c.i){var im=el("img");im.loading="lazy";im.decoding="async";im.referrerPolicy="no-referrer";im.alt="";im.src=c.i;
+      im.onerror=function(){var ph=el("div","ph",c.t.charAt(0).toUpperCase());if(tc)ph.style.setProperty("--tc",tc);im.replaceWith(ph)};a.append(im)}
+    else{var ph=el("div","ph",c.t.charAt(0).toUpperCase());if(tc)ph.style.setProperty("--tc",tc);a.append(ph)}
+    a.append(el("span","badge",c.r||"?"));
+    var tx=el("div","txt");tx.append(el("strong",null,c.t));
+    if(c.g){var tg=el("div","tg");tg.append(dot(c.g),el("span",null,c.g));tx.append(tg)}
+    a.append(tx);return a;
+  }
+  function renderPublic(){
+    var want=st.cards.filter(function(c){return !c.o});
+    if(!loaded)return;
+    $("h1").textContent=st.title||"Cartes recherchées";document.title=st.title||"Cartes recherchées Wiki Masters";
+    var ps=$("psub");ps.textContent="";ps.append(el("b",null,want.length)," carte"+(want.length>1?"s":"")+" Wiki Masters recherchée"+(want.length>1?"s":""));
+    var f=$("friend");f.hidden=!st.pseudo;if(st.pseudo)f.href="https://www.wiki-masters.com/profile/"+encodeURIComponent(st.pseudo);
+    var counts={};want.forEach(function(c){if(c.g)counts[c.g]=(counts[c.g]||0)+1});
+    var names=st.tags.map(function(t){return t.n}).filter(function(n){return counts[n]});
+    if(pv.tag&&!counts[pv.tag])pv.tag=null;
+    var pt=$("ptags");pt.textContent="";pt.hidden=names.length<2;
+    [null].concat(names).forEach(function(n){var b=el("button","chip");b.type="button";
+      if(n)b.append(dot(n));b.append(el("span","nm",n||"Toutes"),el("small",null,n?counts[n]:want.length));
+      b.setAttribute("aria-pressed",pv.tag===n?"true":"false");
+      b.onclick=function(){pv.tag=n;renderPublic()};pt.append(b)});
+    var q=key(pv.q),rows=want.filter(function(c){return (!pv.tag||c.g===pv.tag)&&(!q||key(c.t).indexOf(q)>=0)});
+    var box=$("rows");box.textContent="";rails=[];
+    if(!rows.length){box.append(el("p","empty",!want.length?"Aucune carte recherchée pour l'instant.":"Aucune carte ne correspond."));return}
+    ["L","UR","SR","R","PC","C",""].forEach(function(r){
+      var group=rows.filter(function(c){return (c.r||"")===r});if(!group.length)return;
+      group.sort(function(a,b){return key(a.t).localeCompare(key(b.t),"fr")});
+      var head=el("div","rowhead"),h=el("h2");h.append(el("span","rar "+(r||"X"),r||"?"),document.createTextNode(RNAME[r]));
+      head.append(h,el("small",null,group.length));
+      var rail=el("div","rail");group.forEach(function(c){rail.append(cardEl(c))});
+      box.append(head,rail);rails.push({el:rail,n:group.length,pos:0,hold:0,loop:false});
+    });
+    requestAnimationFrame(setupRails);
+  }
+  /* Défilement lent des rangées trop larges ; il s'arrête dès qu'on touche ou survole la rangée. */
+  var still=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function setupRails(){
+    if(still)return;
+    rails.forEach(function(r){
+      if(r.loop||r.el.scrollWidth<=r.el.clientWidth+40)return;
+      Array.from(r.el.children).forEach(function(c){var k=c.cloneNode(true);k.setAttribute("aria-hidden","true");k.tabIndex=-1;r.el.append(k)});
+      r.loop=true;
+      var stop=function(){r.hold=Infinity},go=function(){r.hold=performance.now()+2500};
+      r.el.addEventListener("pointerenter",stop);r.el.addEventListener("pointerleave",go);
+      r.el.addEventListener("touchstart",stop,{passive:true});r.el.addEventListener("touchend",go);r.el.addEventListener("focusin",stop);r.el.addEventListener("focusout",go);
+    });
+  }
+  function tick(now){
+    if(!$("p-pub").hidden)rails.forEach(function(r,i){
+      if(!r.loop)return;var half=r.el.scrollWidth/2;
+      if(now<r.hold||r.hold===Infinity){r.pos=r.el.scrollLeft;return}
+      r.pos+=(i%2?.45:.3);if(r.pos>=half)r.pos-=half;r.el.scrollLeft=r.pos;
+    });
+    requestAnimationFrame(tick);
+  }
+  if(!still)requestAnimationFrame(tick);
+
+  /* ---------- Mes cartes ---------- */
+  function renderCards(){
+    var todo=st.cards.filter(function(c){return !c.o}).length;
+    var sub=$("sub");sub.textContent="";sub.append(el("b",null,todo)," à trouver · ",el("b",null,st.cards.length-todo)," obtenues");
+    document.querySelectorAll("[data-m]").forEach(function(b){b.setAttribute("aria-pressed",b.dataset.m===addMode?"true":"false")});
+    document.querySelectorAll("[data-for]").forEach(function(l){l.hidden=l.dataset.for.split(" ").indexOf(addMode)<0});
+    $("addbtn").textContent={one:"Ajouter",many:"Ajouter la liste",cat:"Importer la catégorie",fam:"Importer la famille"}[addMode];
+    $("addbtn").disabled=busy;$("refresh").disabled=busy;
+    $("refresh").hidden=!st.cards.some(function(c){return !c.m&&(!c.i||!c.r)});
+    var counts={};st.cards.forEach(function(c){var g=c.g||"Sans étiquette";counts[g]=(counts[g]||0)+1});
+    var names=st.tags.map(function(t){return t.n}).filter(function(n){return counts[n]});if(counts["Sans étiquette"])names.push("Sans étiquette");
+    if(ui.tag&&!counts[ui.tag])ui.tag=null;
+    var tg=$("tags");tg.textContent="";tg.hidden=names.length<2;
+    [null].concat(names).forEach(function(n){var b=el("button","chip");b.type="button";
+      if(n&&n!=="Sans étiquette")b.append(dot(n));b.append(el("span","nm",n||"Toutes"),el("small",null,n?counts[n]:st.cards.length));
+      b.setAttribute("aria-pressed",ui.tag===n?"true":"false");
+      b.onclick=function(){ui.tag=n;keepUi();renderCards()};tg.append(b)});
+    var dl=$("taglist");dl.textContent="";st.tags.forEach(function(t){var o=el("option");o.value=t.n;dl.append(o)});
+    document.querySelectorAll("[data-s]").forEach(function(b){b.setAttribute("aria-pressed",b.dataset.s===ui.s?"true":"false")});
+    document.querySelectorAll("[data-r]").forEach(function(b){b.setAttribute("aria-pressed",b.dataset.r===ui.r?"true":"false")});
+    $("sort").value=ui.sort;
+    var q=key(ui.q);
+    var rows=st.cards.filter(function(c){
+      if(ui.s==="todo"&&c.o)return false;if(ui.s==="got"&&!c.o)return false;
+      if(ui.r&&c.r!==ui.r)return false;
+      if(ui.tag&&(c.g||"Sans étiquette")!==ui.tag)return false;
+      if(q&&key(c.t).indexOf(q)<0)return false;return true});
+    var byTitle=function(a,b){return key(a.t).localeCompare(key(b.t),"fr")};
+    var tagPos={};st.tags.forEach(function(t,i){tagPos[t.n]=i});
+    rows.sort(ui.sort==="rar"?function(a,b){return ORDER[b.r||""]-ORDER[a.r||""]||(b.pv||0)-(a.pv||0)||byTitle(a,b)}
+      :ui.sort==="new"?function(a,b){return b.id-a.id}
+      :ui.sort==="tag"?function(a,b){return (a.g in tagPos?tagPos[a.g]:1e9)-(b.g in tagPos?tagPos[b.g]:1e9)||byTitle(a,b)}:byTitle);
+    var list=$("list");list.textContent="";
+    if(!rows.length)list.append(el("p","empty",!st.cards.length?"La liste est vide. Ajoutez votre première carte avec le formulaire ci-dessus.":"Aucune carte ne correspond à ces filtres."));
+    var MAX=300;
+    rows.slice(0,MAX).forEach(function(c){
+      var it=el("div","item"+(c.o?" got":"")),ln=el("div","line");
+      var ck=el("button","check","✓");ck.type="button";
+      ck.setAttribute("aria-label",(c.o?"Marquer à trouver : ":"Marquer obtenue : ")+c.t);ck.setAttribute("aria-pressed",c.o?"true":"false");
+      ck.onclick=function(){c.o=c.o?0:1;touch()};
+      var th;if(c.i){th=el("img","thumb");th.loading="lazy";th.referrerPolicy="no-referrer";th.alt="";th.src=c.i}else th=el("div","thumb");
+      var main=el("div","main"),a=el("a",null,c.t);a.href=wikiUrl(c.t);a.target="_blank";a.rel="noopener";main.append(a);
+      var sp=el("span");if(c.g)sp.append(dot(c.g),document.createTextNode(c.g));
+      if(c.pv!=null)sp.append(document.createTextNode((c.g?" · ":"")+c.pv.toLocaleString("fr-FR")+" vues/mois"));
+      if(c.m)sp.append(el("span","warn","Article introuvable sur Wikipédia"));
+      if(sp.childNodes.length)main.append(sp);
+      var rr=el("span","rar "+(c.r||"X")+(c.e?" est":""),c.r||"?");if(c.e)rr.title="Rareté estimée d'après les vues";
+      var mo=el("button","more","⋯");mo.type="button";mo.setAttribute("aria-label","Modifier "+c.t);
+      mo.onclick=function(){openId=openId===c.id?null:c.id;renderCards()};
+      ln.append(ck,th,main,rr,mo);it.append(ln);
+      if(openId===c.id){
+        var ed=el("div","editor");
+        var l0=el("label",null,"Titre"),i0=el("input");i0.type="text";i0.value=c.t;l0.append(i0);
+        var two=el("div","two");
+        var l1=el("label",null,"Étiquette"),i1=el("input");i1.type="text";i1.value=c.g||"";i1.setAttribute("list","taglist");l1.append(i1);
+        var l2=el("label",null,"Rareté"),s2=el("select");["","C","PC","R","SR","UR","L"].forEach(function(v){var o=el("option",null,v||"?");o.value=v;s2.append(o)});s2.value=c.r||"";l2.append(s2);
+        two.append(l1,l2);
+        var ac=el("div","actions"),ok=el("button","btn primary","Valider"),del=el("button","btn quiet danger","Supprimer");ok.type=del.type="button";
+        ok.onclick=function(){var t=parseTitle(i0.value),changed=t&&t!==c.t;if(t)c.t=t;c.g=i1.value.trim().slice(0,60);
+          if(s2.value!==(c.r||"")){c.r=s2.value;delete c.e}openId=null;
+          if(changed){delete c.i;delete c.pv;delete c.m;touch();complete([c],function(){})}else touch()};
+        del.onclick=function(){if(del.dataset.sure){st.cards=st.cards.filter(function(x){return x!==c});openId=null;touch()}else{del.dataset.sure="1";del.textContent="Confirmer la suppression"}};
+        ac.append(ok,del);ed.append(l0,two,ac);it.append(ed);
+      }
+      list.append(it);
+    });
+    if(rows.length>MAX)list.append(el("p","empty",(rows.length-MAX)+" autres cartes : affinez avec la recherche ou les filtres pour les voir."));
+  }
+
+  /* ---------- Étiquettes ---------- */
+  function renderTags(){
+    var counts={};st.cards.forEach(function(c){if(c.g)counts[c.g]=(counts[c.g]||0)+1});
+    var box=$("taglistui");box.textContent="";
+    if(!st.tags.length)box.append(el("p","empty","Aucune étiquette. Créez-en une ci-dessus."));
+    st.tags.forEach(function(t,i){
+      var row=el("div","trow");
+      var col=el("input");col.type="color";col.value=t.c;col.setAttribute("aria-label","Couleur de "+t.n);
+      col.addEventListener("change",function(){t.c=col.value;touch()});
+      var nm=el("input");nm.type="text";nm.value=t.n;nm.maxLength=60;nm.setAttribute("aria-label","Nom de l'étiquette");
+      nm.addEventListener("change",function(){var v=nm.value.trim();if(!v||v===t.n){nm.value=t.n;return}
+        var old=t.n,other=st.tags.find(function(x){return x!==t&&x.n===v});
+        st.cards.forEach(function(c){if(c.g===old)c.g=v});
+        if(other)st.tags=st.tags.filter(function(x){return x!==t});else t.n=v;
+        if(ui.tag===old)ui.tag=v;touch()});
+      var up=el("button","ico","↑"),dn=el("button","ico","↓"),del=el("button","ico","✕");up.type=dn.type=del.type="button";
+      up.disabled=i===0;dn.disabled=i===st.tags.length-1;
+      up.setAttribute("aria-label","Monter "+t.n);dn.setAttribute("aria-label","Descendre "+t.n);del.setAttribute("aria-label","Supprimer "+t.n);
+      up.onclick=function(){st.tags.splice(i-1,0,st.tags.splice(i,1)[0]);touch()};
+      dn.onclick=function(){st.tags.splice(i+1,0,st.tags.splice(i,1)[0]);touch()};
+      del.onclick=function(){if(del.dataset.sure||!counts[t.n]){st.cards.forEach(function(c){if(c.g===t.n)c.g=""});st.tags=st.tags.filter(function(x){return x!==t});touch()}
+        else{del.dataset.sure="1";del.textContent="Sûr ?";del.style.width="auto";del.style.padding="0 10px";del.style.color="var(--danger)"}};
+      row.append(col,nm,el("span","n",counts[t.n]||0),up,dn,del);box.append(row)});
+  }
+
+  /* ---------- Apparence ---------- */
+  function renderLook(){
+    if(document.activeElement!==$("ptitle"))$("ptitle").value=st.title;
+    if(document.activeElement!==$("pseudo"))$("pseudo").value=st.pseudo;
+    var cur=st.theme||{bg:cssHex("--bg"),fg:cssHex("--fg"),ac:cssHex("--accent")};
+    $("c-bg").value=cur.bg;$("c-fg").value=cur.fg;$("c-ac").value=cur.ac;
+    var pr=$("presets");pr.textContent="";
+    PRESETS.forEach(function(p){var b=el("button","chip");b.type="button";
+      if(p[1]){var s=el("span","swatch");s.style.background="linear-gradient(135deg,"+p[1].bg+" 50%,"+p[1].ac+" 50%)";b.append(s)}
+      b.append(el("span","nm",p[0]));
+      var on=p[1]?(st.theme&&st.theme.bg===p[1].bg&&st.theme.fg===p[1].fg&&st.theme.ac===p[1].ac):!st.theme;
+      b.setAttribute("aria-pressed",on?"true":"false");
+      b.onclick=function(){st.theme=p[1]?clone(p[1]):null;touch()};pr.append(b)});
+    var low=st.theme&&Math.abs(lum(st.theme.bg)-lum(st.theme.fg))<.25;
+    $("lookmsg").textContent=low?"Attention : le texte et le fond sont trop proches, la page sera difficile à lire.":"Le changement s'applique tout de suite ici. Regardez le résultat dans l'onglet Aperçu, puis enregistrez.";
+    $("ghinfo").textContent=gh?"Connecté au dépôt "+gh.owner+"/"+gh.repo+". La clé d'accès est gardée sur cet appareil.":"";
+  }
+
+  var view="pub";
+  function render(){
+    applyTheme();
+    var tab=view==="login"?"login":owner?ui.tab:"pub";
+    $("tabs").hidden=!owner||view==="login";$("manage").hidden=owner;
+    document.querySelectorAll("[data-tab]").forEach(function(b){b.setAttribute("aria-selected",b.dataset.tab===tab?"true":"false")});
+    ["pub","login","cards","tags","look"].forEach(function(p){$("p-"+p).hidden=p!==tab});
+    if(tab==="pub")renderPublic();else if(tab==="cards")renderCards();else if(tab==="tags")renderTags();else if(tab==="look")renderLook();
+    $("bar").hidden=!(owner&&dirty);
+    if(dirty&&!$("save").disabled)$("barmsg").textContent="Modifications non enregistrées. Les visiteurs ne les voient pas encore.";
+  }
+
+  /* ---------- GitHub ---------- */
+  function guessRepo(){var m=location.hostname.match(/^([^.]+)\.github\.io$/i),seg=location.pathname.split("/").filter(Boolean)[0];
+    if(seg&&/\.html?$/i.test(seg))seg="";return {owner:m?m[1]:"",repo:seg||(m?m[1]+".github.io":"")}}
+  async function ghApi(cfg,method,body){
+    var r=await fetch("https://api.github.com/repos/"+encodeURIComponent(cfg.owner)+"/"+encodeURIComponent(cfg.repo)+"/contents/data.json"+(method==="GET"?"?t="+Date.now():""),
+      {method:method,headers:{"Accept":"application/vnd.github+json","Authorization":"Bearer "+cfg.token,"X-GitHub-Api-Version":"2022-11-28"},body:body?JSON.stringify(body):undefined});
+    var j=null;try{j=await r.json()}catch(e){}
+    if(!r.ok){var err=new Error((j&&j.message)||("GitHub a répondu "+r.status));err.status=r.status;throw err}
+    return j;
+  }
+  function b64encode(s){var b=new TextEncoder().encode(s),bin="";for(var i=0;i<b.length;i+=0x8000)bin+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000));return btoa(bin)}
+  function b64decode(s){var bin=atob(s.replace(/\s/g,"")),b=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)b[i]=bin.charCodeAt(i);return new TextDecoder().decode(b)}
+  function ghError(e){return e.status===401?"La clé d'accès est refusée : elle est peut-être expirée ou mal copiée."
+    :e.status===403?"La clé d'accès n'a pas le droit d'écrire dans ce dépôt (permission « Contents » en lecture et écriture requise)."
+    :e.status===404?"Dépôt ou fichier data.json introuvable. Vérifiez le compte, le nom du dépôt et que la clé couvre bien ce dépôt."
+    :"GitHub ne répond pas correctement ("+(e.message||"erreur réseau")+"). Réessayez dans un instant."}
+  async function loadOwner(cfg){
+    var j=await ghApi(cfg,"GET");sha=j.sha;
+    saved=normalize(j.content?JSON.parse(b64decode(j.content)):clone(EMPTY));st=clone(saved);dirty=false;loaded=true;
+    var d=ls(DKEY);if(d&&d.sha===sha&&d.st){st=normalize(d.st);dirty=true}else if(d)ls(DKEY,null);
+    owner=true;loadOwned();
+  }
+  async function boot(){
+    render();
+    if(gh&&gh.token){
+      try{await loadOwner(gh);view="app";render();return}
+      catch(e){if(e.status===401||e.status===404){/* clé invalide : on retombe en vue visiteur */}}
+    }
+    try{var r=await fetch("data.json?t="+Date.now());if(!r.ok)throw 0;saved=normalize(await r.json());st=clone(saved);loaded=true}
+    catch(e){$("psub").textContent="La liste n'a pas pu être chargée. Rechargez la page.";applyTheme();return}
+    render();
+  }
+
+  /* ---------- Événements ---------- */
+  document.querySelectorAll("[data-tab]").forEach(function(b){b.onclick=function(){ui.tab=b.dataset.tab;keepUi();render();window.scrollTo(0,0)}});
+  $("pq").addEventListener("input",function(){pv.q=this.value;renderPublic()});
+  $("manage").onclick=function(){var g=gh||guessRepo();$("gh-owner").value=g.owner||"";$("gh-repo").value=g.repo||"";$("gh-token").value="";$("loginmsg").textContent="";view="login";render();window.scrollTo(0,0)};
+  $("logincancel").onclick=function(){view="pub";render()};
+  $("login").addEventListener("submit",async function(ev){ev.preventDefault();
+    var cfg={owner:$("gh-owner").value.trim(),repo:$("gh-repo").value.trim(),token:$("gh-token").value.trim()};
+    if(!cfg.owner||!cfg.repo||!cfg.token){$("loginmsg").textContent="Renseignez les trois champs.";return}
+    $("loginbtn").disabled=true;$("loginmsg").textContent="Connexion…";
+    try{await loadOwner(cfg);gh=cfg;ls(GKEY,cfg);view="app";ui.tab="cards";render()}
+    catch(e){$("loginmsg").textContent=ghError(e)}
+    $("loginbtn").disabled=false;
+  });
+  $("logout").onclick=function(){if(this.dataset.sure){ls(GKEY,null);ls(DKEY,null);location.reload()}else{this.dataset.sure="1";this.textContent="Confirmer la déconnexion"}};
+
+  document.querySelectorAll("[data-m]").forEach(function(b){b.onclick=function(){addMode=b.dataset.m;$("addmsg").textContent="";$("sugg").hidden=true;renderCards()}});
+  var sgTimer=0,sgSeq=0;
+  $("title").addEventListener("input",function(){var v=this.value.trim(),box=$("sugg");clearTimeout(sgTimer);
+    if(v.length<2||/wikipedia\.org/.test(v)){box.hidden=true;return}
+    sgTimer=setTimeout(async function(){var seq=++sgSeq;
+      try{var d=await wikiGet({action:"opensearch",search:v,limit:"6",namespace:"0"});if(seq!==sgSeq)return;
+        box.textContent="";(d[1]||[]).forEach(function(t){var b=el("button",null,t);b.type="button";
+          b.onclick=function(){$("title").value=t;box.hidden=true;$("add").requestSubmit()};box.append(b)});
+        box.hidden=!box.childNodes.length}catch(e){box.hidden=true}},250)});
+  $("add").addEventListener("submit",async function(ev){ev.preventDefault();if(busy)return;
+    var say=function(m){$("addmsg").textContent=m},tag=$("tag").value.trim().slice(0,60),rar=$("rar").value,entries=[];
+    $("sugg").hidden=true;busy=true;renderCards();
+    try{
+      if(addMode==="one")entries=[{t:$("title").value}];
+      else if(addMode==="many")entries=$("many").value.split(/\r?\n/).map(function(t){return {t:t}});
+      else if(addMode==="cat"){if(!$("cat").value.trim())throw new Error("Saisissez le nom de la catégorie.");
+        say("Lecture de la catégorie…");var ts=await wikiCategory($("cat").value);
+        if(!ts.length)throw new Error("Cette catégorie est vide ou introuvable sur Wikipédia en français.");
+        entries=ts.map(function(t){return {t:t}});rar=""}
+      else{var fam=await decodeFamily($("fam").value);if(!fam.cards.length)throw new Error("Cette famille ne contient aucune carte.");
+        entries=fam.cards;rar="";if(!tag)tag=fam.name.slice(0,60)}
+      if(!entries.some(function(e){return parseTitle(e.t)}))throw new Error(addMode==="one"?"Saisissez d'abord un titre.":"Rien à ajouter.");
+      var res=await addEntries(entries,tag,rar,say);
+      var msg=res.added?res.added+" carte"+(res.added>1?"s ajoutées":" ajoutée")+".":"Rien de nouveau à ajouter.";
+      if(res.own)msg+=" "+res.own+" déjà dans votre collection, cochée"+(res.own>1?"s":"")+" obtenue"+(res.own>1?"s":"")+".";
+      if(res.miss)msg+=" "+res.miss+" sans article Wikipédia à ce nom : vérifiez le titre.";
+      if(res.dup)msg+=" "+res.dup+" déjà dans la liste.";
+      if(res.added){$("title").value="";$("many").value="";$("cat").value="";$("fam").value="";
+        if(res.own===res.added)ui.s="all";else if(ui.s==="got")ui.s="todo"}
+      say(msg);
+    }catch(e){say(e.message||"L'ajout a échoué.")}
+    busy=false;renderCards();
+  });
+  $("refresh").onclick=async function(){if(busy)return;busy=true;renderCards();
+    var say=function(m){$("addmsg").textContent=m};await loadOwned();
+    var todo=st.cards.filter(function(c){return !c.m&&(!c.i||!c.r)});
+    await complete(todo,say);say(todo.length+" carte"+(todo.length>1?"s vérifiées":" vérifiée")+" sur Wikipédia.");busy=false;renderCards()};
+  document.querySelectorAll("[data-s]").forEach(function(b){b.onclick=function(){ui.s=b.dataset.s;keepUi();renderCards()}});
+  document.querySelectorAll("[data-r]").forEach(function(b){b.onclick=function(){ui.r=b.dataset.r;renderCards()}});
+  $("q").addEventListener("input",function(){ui.q=this.value;renderCards()});
+  $("sort").addEventListener("change",function(){ui.sort=this.value;keepUi();renderCards()});
+  $("newtag").addEventListener("submit",function(ev){ev.preventDefault();var v=$("newtagname").value.trim().slice(0,60);
+    if(!v||st.tags.some(function(t){return t.n===v}))return;
+    st.tags.push({n:v,c:PALETTE[st.tags.length%PALETTE.length]});$("newtagname").value="";touch()});
+  $("ptitle").addEventListener("input",function(){st.title=this.value.trim().slice(0,60);touch()});
+  $("pseudo").addEventListener("input",function(){st.pseudo=this.value.trim().slice(0,40);touch()});
+  ["c-bg","c-fg","c-ac"].forEach(function(id){$(id).addEventListener("change",function(){st.theme={bg:$("c-bg").value,fg:$("c-fg").value,ac:$("c-ac").value};touch()})});
+  $("undo").onclick=function(){if(this.dataset.sure){delete this.dataset.sure;this.textContent="Annuler";st=clone(saved);dirty=false;openId=null;ls(DKEY,null);render()}
+    else{this.dataset.sure="1";this.textContent="Tout annuler ?"}};
+  $("save").onclick=async function(){
+    var btn=this,msg=$("barmsg");btn.disabled=true;msg.textContent="Enregistrement…";
+    var body={message:"Mise à jour de la liste",content:b64encode(JSON.stringify(st)),sha:sha};
+    try{
+      var j;
+      try{j=await ghApi(gh,"PUT",body)}
+      catch(e){if(e.status!==409&&e.status!==422)throw e;body.sha=(await ghApi(gh,"GET")).sha;j=await ghApi(gh,"PUT",body)}
+      sha=j.content.sha;saved=clone(st);dirty=false;ls(DKEY,null);btn.disabled=false;render();
+      $("bar").hidden=false;msg.textContent="Enregistré. Les visiteurs verront la mise à jour d'ici une à deux minutes.";
+      $("undo").hidden=true;btn.hidden=true;
+      setTimeout(function(){$("undo").hidden=false;btn.hidden=false;render()},5000);
+    }catch(e){btn.disabled=false;msg.textContent=ghError(e)+" Vos modifications sont conservées sur cet appareil."}
+  };
+  window.addEventListener("beforeunload",function(ev){if(busy){ev.preventDefault();ev.returnValue=""}});
+
+  boot();
+})();
+</script>
+</body>
+</html>

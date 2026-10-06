@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wiki Masters → ma collection sur GitHub
 // @namespace    vivik88.cartes
-// @version      1.0
+// @version      1.1
 // @description  Une fois par jour, relit ma collection Wiki Masters et met à jour owned.json dans mon dépôt GitHub.
 // @match        https://www.wiki-masters.com/*
 // @match        https://wiki-masters.com/*
@@ -31,10 +31,12 @@
   function say(text, keep) {
     if (!box) {
       box = document.createElement("div");
-      box.style.cssText = "position:fixed;right:14px;bottom:14px;z-index:2147483647;max-width:320px;padding:10px 14px;border-radius:10px;background:#15171c;color:#eceef2;font:14px/1.35 system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.5);border:1px solid #2e313a";
-      document.body.appendChild(box);
+      box.style.cssText = "position:fixed;left:10px;right:10px;top:10px;z-index:2147483647;margin:0 auto;max-width:420px;text-align:center;padding:12px 14px;border-radius:10px;background:#15171c;color:#eceef2;font:14px/1.35 system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.5);border:1px solid #2e313a";
+      (document.body || document.documentElement).appendChild(box);
     }
+    if (!box.isConnected) (document.body || document.documentElement).appendChild(box);
     box.textContent = "Collection → GitHub : " + text;
+    try { console.log("[wm-sync] " + text); } catch (e) {}
     box.hidden = false;
     clearTimeout(say.t);
     if (!keep) say.t = setTimeout(function () { box.hidden = true; }, 8000);
@@ -121,6 +123,7 @@
   async function sync(full) {
     if (running) return; running = true;
     try {
+      say("démarrage…", true);
       if (!cfg.token) { say("pas encore configuré. Ouvrez le menu de Tampermonkey puis « Configurer »."); return; }
       var rows = GM_getValue("rows", null), lastFull = GM_getValue("lastFull", 0), added = null;
       if (!rows || full || Date.now() - lastFull > JOURS_COMPLET * 864e5) {

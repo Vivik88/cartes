@@ -269,6 +269,7 @@ input[type=text],input[type=search],input[type=password],select,textarea{box-sha
         <button class="chip" type="button" data-m="one">Une carte</button>
         <button class="chip" type="button" data-m="many">Une liste</button>
         <button class="chip" type="button" data-m="word">Mot dans le titre</button>
+        <button class="chip" type="button" data-m="desc">Mot dans la description</button>
         <button class="chip" type="button" data-m="page">Liens d'une page</button>
         <button class="chip" type="button" data-m="cat">Catégorie Wikipédia</button>
         <button class="chip" type="button" data-m="fam">Code de famille</button>
@@ -282,6 +283,9 @@ input[type=text],input[type=search],input[type=password],select,textarea{box-sha
       </label>
       <label data-for="word" hidden>Mot présent dans le titre de l'article
         <input type="text" id="word" placeholder="Ex. Vivien" enterkeyhint="search">
+      </label>
+      <label data-for="desc" hidden>Mots présents dans la courte description de la carte
+        <input type="text" id="dword" placeholder="Ex. saveur anis" enterkeyhint="search">
       </label>
       <label data-for="page" hidden>Nom ou lien de la page Wikipédia qui liste les articles
         <input type="text" id="src" placeholder="Ex. Liste des drapeaux nationaux par proportions">
@@ -435,8 +439,8 @@ input[type=text],input[type=search],input[type=password],select,textarea{box-sha
   }
 
   /* ---------- Wikipédia ---------- */
-  async function wikiGet(params){
-    var u=new URL(WIKI);Object.keys(params).forEach(function(k){u.searchParams.set(k,params[k])});
+  async function wikiGet(params,base){
+    var u=new URL(base||WIKI);Object.keys(params).forEach(function(k){u.searchParams.set(k,params[k])});
     u.searchParams.set("format","json");u.searchParams.set("origin","*");
     var r=await fetch(u.toString());if(!r.ok)throw new Error("Wikipédia a répondu "+r.status);return r.json();
   }
@@ -496,6 +500,25 @@ input[type=text],input[type=search],input[type=password],select,textarea{box-sha
     var keep=titleFilter(query||""),seen=new Set();
     return titles.filter(function(t){if(seen.has(t))return false;seen.add(t);return keep(t)}).sort(function(a,b){return key(a).localeCompare(key(b),"fr")});
   }
+  /* Articles dont la courte description (celle affichée sur les cartes, tenue par Wikidata) contient tous les mots demandés. */
+  async function wikiDescSearch(query){
+    var WD="https://www.wikidata.org/w/api.php",keep=titleFilter(query);
+    if(!keep.need.length)throw new Error("Saisissez au moins un mot à chercher.");
+    var ids=[],cont={},loops=0;
+    do{
+      var data=await wikiGet(Object.assign({action:"query",list:"search",srsearch:keep.need.join(" "),srnamespace:"0",srlimit:"500",srprop:"",srinfo:"",uselang:"fr"},cont),WD);
+      ((data.query||{}).search||[]).forEach(function(p){ids.push(p.title)});
+      cont=data.continue||null;
+    }while(cont&&++loops<4);
+    var out=[],seen=new Set();
+    for(var i=0;i<ids.length;i+=50){
+      var e=(await wikiGet({action:"wbgetentities",ids:ids.slice(i,i+50).join("|"),props:"descriptions|sitelinks",languages:"fr",sitefilter:"frwiki"},WD)).entities||{};
+      Object.keys(e).forEach(function(id){var x=e[id],t=x.sitelinks&&x.sitelinks.frwiki&&x.sitelinks.frwiki.title,d=x.descriptions&&x.descriptions.fr&&x.descriptions.fr.value;
+        if(t&&d&&!seen.has(t)&&t.indexOf(":")<0&&keep(d)){seen.add(t);out.push({t:t,d:d})}});
+      $("addmsg").textContent="Lecture des descriptions… "+Math.min(i+50,ids.length)+" / "+ids.length;
+    }
+    return out.sort(function(a,b){return key(a.t).localeCompare(key(b.t),"fr")});
+  }
   async function wikiTitleSearch(query){
     var keep=titleFilter(query),need=keep.need;
     if(!need.length)throw new Error("Saisissez un mot à chercher.");
@@ -511,14 +534,14 @@ input[type=text],input[type=search],input[type=password],select,textarea{box-sha
   }
   var picks=null;
   function renderPicks(){
-    var box=$("picks");box.textContent="";box.hidden=!((addMode==="word"||addMode==="page")&&picks&&picks.items.length);
+    var box=$("picks");box.textContent="";box.hidden=!((addMode==="word"||addMode==="page"||addMode==="desc")&&picks&&picks.items.length);
     if(box.hidden)return;
     picks.items.forEach(function(it){var l=el("label"),c=el("input");c.type="checkbox";c.checked=it.on;
-      c.onchange=function(){it.on=c.checked;setAddLabel()};l.append(c,el("span",null,it.t+(it.have?" (déjà dans la liste)":"")));box.append(l)});
+      c.onchange=function(){it.on=c.checked;setAddLabel()};l.append(c,el("span",null,it.t+(it.d?" · "+it.d:"")+(it.have?" (déjà dans la liste)":"")));box.append(l)});
   }
   function setAddLabel(){
     var n=picks?picks.items.filter(function(i){return i.on}).length:0;
-    $("addbtn").textContent={one:"Ajouter",many:"Ajouter la liste",cat:"Importer la catégorie",fam:"Importer la famille",word:picks?"Importer la sélection ("+n+")":"Chercher",page:picks?"Importer la sélection ("+n+")":"Chercher"}[addMode];
+    $("addbtn").textContent={one:"Ajouter",many:"Ajouter la liste",cat:"Importer la catégorie",fam:"Importer la famille",word:picks?"Importer la sélection ("+n+")":"Chercher",page:picks?"Importer la sélection ("+n+")":"Chercher",desc:picks?"Importer la sélection ("+n+")":"Chercher"}[addMode];
   }
   async function loadOwned(){
     if(OWN)return;OWN=new Map();
@@ -834,18 +857,19 @@ input[type=text],input[type=search],input[type=password],select,textarea{box-sha
     try{
       if(addMode==="one")entries=[{t:$("title").value}];
       else if(addMode==="many")entries=$("many").value.split(/\r?\n/).map(function(t){return {t:t}});
-      else if(addMode==="word"||addMode==="page"){
-        var q=addMode==="word"?$("word").value.trim():$("src").value.trim()+"|"+$("srcword").value.trim();
+      else if(addMode==="word"||addMode==="page"||addMode==="desc"){
+        var q=addMode==="word"?$("word").value.trim():addMode==="desc"?$("dword").value.trim():$("src").value.trim()+"|"+$("srcword").value.trim();
         if(!picks||picks.q!==q){
           if(addMode==="page"&&!$("src").value.trim())throw new Error("Saisissez le nom ou le lien de la page.");
           say("Recherche sur Wikipédia…");
-          var found=addMode==="word"?await wikiTitleSearch(q):await wikiPageLinks($("src").value,$("srcword").value);
-          if(!found.length){picks=null;throw new Error(addMode==="word"?"Aucun article dont le titre contient ce mot.":"Aucun article trouvé dans cette page avec ce filtre.")}
+          var found=addMode==="word"?await wikiTitleSearch(q):addMode==="desc"?await wikiDescSearch(q):await wikiPageLinks($("src").value,$("srcword").value);
+          found=found.map(function(f){return typeof f==="string"?{t:f}:f});
+          if(!found.length){picks=null;throw new Error(addMode==="word"?"Aucun article dont le titre contient ce mot.":addMode==="desc"?"Aucune carte dont la description contient ces mots.":"Aucun article trouvé dans cette page avec ce filtre.")}
           var have=new Set(st.cards.map(function(c){return key(c.t)}));
-          picks={q:q,items:found.map(function(t){var h=have.has(key(t));return {t:t,have:h,on:!h&&!/\((homonymie|prénom|patronyme)\)$/i.test(t)}})};
+          picks={q:q,items:found.map(function(f){var h=have.has(key(f.t));return {t:f.t,d:f.d||"",have:h,on:!h&&!/\((homonymie|prénom|patronyme)\)$/i.test(f.t)}})};
           say(found.length+" article"+(found.length>1?"s trouvés":" trouvé")+". Décochez ceux que vous ne voulez pas, puis importez.");
           busy=false;renderCards();return}
-        entries=picks.items.filter(function(i){return i.on}).map(function(i){return {t:i.t}});rar="";
+        entries=picks.items.filter(function(i){return i.on}).map(function(i){return {t:i.t,d:i.d}});rar="";
         if(!entries.length)throw new Error("Cochez au moins un article.")}
       else if(addMode==="cat"){if(!$("cat").value.trim())throw new Error("Saisissez le nom de la catégorie.");
         say("Lecture de la catégorie…");var ts=await wikiCategory($("cat").value);
@@ -859,7 +883,7 @@ input[type=text],input[type=search],input[type=password],select,textarea{box-sha
       if(res.own)msg+=" "+res.own+" déjà dans votre collection, cochée"+(res.own>1?"s":"")+" obtenue"+(res.own>1?"s":"")+".";
       if(res.miss)msg+=" "+res.miss+" sans article Wikipédia à ce nom : vérifiez le titre.";
       if(res.dup)msg+=" "+res.dup+" déjà dans la liste.";
-      if(res.added||addMode==="word"||addMode==="page"){picks=null;$("word").value="";$("src").value="";$("srcword").value=""}
+      if(res.added||addMode==="word"||addMode==="page"||addMode==="desc"){picks=null;$("dword").value="";$("word").value="";$("src").value="";$("srcword").value=""}
       if(res.added){$("title").value="";$("many").value="";$("cat").value="";$("fam").value="";
         if(res.own===res.added)ui.s="all";else if(ui.s==="got")ui.s="todo"}
       say(msg);
@@ -873,7 +897,7 @@ input[type=text],input[type=search],input[type=password],select,textarea{box-sha
   document.querySelectorAll("[data-s]").forEach(function(b){b.onclick=function(){ui.s=b.dataset.s;keepUi();renderCards()}});
   document.querySelectorAll("[data-r]").forEach(function(b){b.onclick=function(){ui.r=b.dataset.r;renderCards()}});
   $("q").addEventListener("input",function(){ui.q=this.value;renderCards()});
-  ["word","src","srcword"].forEach(function(id){$(id).addEventListener("input",function(){if(picks){picks=null;setAddLabel();renderPicks()}})});
+  ["word","src","srcword","dword"].forEach(function(id){$(id).addEventListener("input",function(){if(picks){picks=null;setAddLabel();renderPicks()}})});
   $("sort").addEventListener("change",function(){ui.sort=this.value;keepUi();renderCards()});
   $("newtag").addEventListener("submit",function(ev){ev.preventDefault();var v=$("newtagname").value.trim().slice(0,60);
     if(!v||st.tags.some(function(t){return t.n===v}))return;

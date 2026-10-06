@@ -107,6 +107,7 @@ footer button{background:none;border:0;padding:6px 0;color:var(--muted);text-dec
 .picks{display:flex;flex-direction:column;max-height:320px;overflow-y:auto;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
 .picks label{flex-direction:row;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line);font-size:.95rem;font-weight:400;color:var(--fg);cursor:pointer}
 .picks label:last-child{border-bottom:0}
+.pickall{position:sticky;top:0;z-index:1;text-align:left;font-weight:800;padding:10px 12px;border:0;border-bottom:1px solid var(--line);background:var(--surface);color:var(--accent);cursor:pointer}
 .picks input{flex:none;width:20px;height:20px;accent-color:var(--accent)}
 .sugg{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .sugg button{text-align:left;background:var(--bg);border:0;border-bottom:1px solid var(--line);padding:10px 12px;cursor:pointer;min-height:42px}
@@ -312,6 +313,7 @@ input[type=text],input[type=search],input[type=password],select,textarea{box-sha
       <div class="actions">
         <button class="btn primary" type="submit" id="addbtn">Ajouter</button>
         <button class="btn quiet" type="button" id="refresh">Compléter les infos manquantes</button>
+        <button class="btn quiet danger" type="button" id="purge" hidden></button>
       </div>
       <p class="hint" id="addmsg" role="status"></p>
       <p class="hint">En rareté « Auto », elle est estimée d'après les vues de l'article sur 30 jours et affichée en pointillés. Les cartes de votre collection (relevé du 6 octobre 2026) sont ajoutées cochées, avec leur vraie rareté.</p>
@@ -536,8 +538,10 @@ input[type=text],input[type=search],input[type=password],select,textarea{box-sha
   function renderPicks(){
     var box=$("picks");box.textContent="";box.hidden=!((addMode==="word"||addMode==="page"||addMode==="desc")&&picks&&picks.items.length);
     if(box.hidden)return;
+    var allOn=picks.items.every(function(i){return i.on}),tb=el("button","pickall",allOn?"Tout décocher":"Tout cocher");tb.type="button";
+    tb.onclick=function(){picks.items.forEach(function(i){i.on=!allOn});setAddLabel();renderPicks()};box.append(tb);
     picks.items.forEach(function(it){var l=el("label"),c=el("input");c.type="checkbox";c.checked=it.on;
-      c.onchange=function(){it.on=c.checked;setAddLabel()};l.append(c,el("span",null,it.t+(it.d?" · "+it.d:"")+(it.have?" (déjà dans la liste)":"")));box.append(l)});
+      c.onchange=function(){it.on=c.checked;setAddLabel();tb.textContent=picks.items.every(function(i){return i.on})?"Tout décocher":"Tout cocher"};l.append(c,el("span",null,it.t+(it.d?" · "+it.d:"")+(it.have?" (déjà dans la liste)":"")));box.append(l)});
   }
   function setAddLabel(){
     var n=picks?picks.items.filter(function(i){return i.on}).length:0;
@@ -677,6 +681,7 @@ input[type=text],input[type=search],input[type=password],select,textarea{box-sha
     setAddLabel();renderPicks();
     $("addbtn").disabled=busy;$("refresh").disabled=busy;
     $("refresh").hidden=!st.cards.some(function(c){return !c.m&&(!c.i||!c.r||c.d==null)});
+    var noArt=st.cards.filter(function(c){return c.m}).length;$("purge").hidden=!noArt;$("purge").textContent="Retirer "+(noArt>1?"les "+noArt+" cartes":"la carte")+" sans article Wikipédia";
     var counts={};st.cards.forEach(function(c){var g=c.g||"Sans étiquette";counts[g]=(counts[g]||0)+1});
     var names=st.tags.map(function(t){return t.n}).filter(function(n){return counts[n]});if(counts["Sans étiquette"])names.push("Sans étiquette");
     if(ui.tag&&!counts[ui.tag])ui.tag=null;
@@ -890,6 +895,8 @@ input[type=text],input[type=search],input[type=password],select,textarea{box-sha
     }catch(e){say(e.message||"L'ajout a échoué.")}
     busy=false;renderCards();
   });
+  $("purge").onclick=function(){var n=st.cards.filter(function(c){return c.m}).length;st.cards=st.cards.filter(function(c){return !c.m});
+    $("addmsg").textContent=n+" carte"+(n>1?"s retirées":" retirée")+". « Annuler » en bas de page les rétablit tant que vous n'avez pas enregistré.";touch()};
   $("refresh").onclick=async function(){if(busy)return;busy=true;renderCards();
     var say=function(m){$("addmsg").textContent=m};await loadOwned();
     var todo=st.cards.filter(function(c){return !c.m&&(!c.i||!c.r||c.d==null)});

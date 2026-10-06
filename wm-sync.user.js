@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wiki Masters → ma collection sur GitHub
 // @namespace    vivik88.cartes
-// @version      1.2
+// @version      1.3
 // @description  Une fois par jour, relit ma collection Wiki Masters et met à jour owned.json dans mon dépôt GitHub.
 // @match        https://www.wiki-masters.com/*
 // @match        https://wiki-masters.com/*
@@ -107,15 +107,15 @@
     var seen = {}, out = { C: [], PC: [], R: [], SR: [], UR: [], L: [] }, n = 0;
     Object.keys(rows).forEach(function (id) { var x = rows[id]; if (seen[x.t]) return; seen[x.t] = 1; (out[x.r] = out[x.r] || []).push(x.t); n++; });
     Object.keys(out).forEach(function (r) { out[r].sort(); });
-    return JSON.stringify({ n: n, d: new Date().toISOString().slice(0, 10), r: out });
+    return JSON.stringify({ n: n, d: new Date().toISOString(), r: out });
   }
   async function publish(rows) {
     var text = buildOwned(rows);
-    if (text.replace(/"d":"[^"]*",/, "") === String(GM_getValue("lastText", "")).replace(/"d":"[^"]*",/, "")) return false;
+    var same = text.replace(/"d":"[^"]*",/, "") === String(GM_getValue("lastText", "")).replace(/"d":"[^"]*",/, "");
     var sha; try { sha = (await gh("GET")).sha; } catch (e) { if (e.status !== 404) throw e; }
     await gh("PUT", { message: "Mise à jour de la collection", content: b64(text), sha: sha });
     GM_setValue("lastText", text);
-    return true;
+    return !same;
   }
 
   /* ---------- Synchronisation ---------- */

@@ -316,7 +316,8 @@ input[type=text],input[type=search],input[type=password],select,textarea{box-sha
         <button class="btn quiet danger" type="button" id="purge" hidden></button>
       </div>
       <p class="hint" id="addmsg" role="status"></p>
-      <p class="hint">En rareté « Auto », elle est estimée d'après les vues de l'article sur 30 jours et affichée en pointillés. Les cartes de votre collection (relevé du 6 octobre 2026) sont ajoutées cochées, avec leur vraie rareté.</p>
+      <p class="hint">En rareté « Auto », elle est estimée d'après les vues de l'article sur 30 jours et affichée en pointillés.</p>
+      <p class="hint" id="ownhint"></p>
     </form>
     <div class="ribbon" id="tags" role="group" aria-label="Étiquettes"></div>
     <div class="ribbon" role="group" aria-label="État et rareté">
@@ -547,10 +548,29 @@ input[type=text],input[type=search],input[type=password],select,textarea{box-sha
     var n=picks?picks.items.filter(function(i){return i.on}).length:0;
     $("addbtn").textContent={one:"Ajouter",many:"Ajouter la liste",cat:"Importer la catégorie",fam:"Importer la famille",word:picks?"Importer la sélection ("+n+")":"Chercher",page:picks?"Importer la sélection ("+n+")":"Chercher",desc:picks?"Importer la sélection ("+n+")":"Chercher"}[addMode];
   }
-  async function loadOwned(){
-    if(OWN)return;OWN=new Map();
-    try{var r=await fetch("owned.json");if(!r.ok)return;var ow=(await r.json()).r;
-      Object.keys(ow).forEach(function(rr){ow[rr].forEach(function(t){OWN.set(key(t),[t,rr])})})}catch(e){}
+  var ownP=null,ownDate="",ownTime=0;
+  function ownLabel(){if(!ownDate)return "";var t=new Date(ownDate);if(isNaN(t))return ownDate;
+    return ownDate.length>10?t.toLocaleDateString("fr-FR")+" à "+t.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}):ownDate.split("-").reverse().join("/")}
+  function loadOwned(){
+    if(!ownP)ownP=(async function(){OWN=new Map();
+      try{var r=await fetch("owned.json?t="+Date.now());if(!r.ok)return;var j=await r.json(),ow=j.r;ownDate=j.d||"";ownTime=ownDate?(new Date(ownDate).getTime()||0):0;
+        Object.keys(ow).forEach(function(rr){ow[rr].forEach(function(t){OWN.set(key(t),[t,rr])})})}catch(e){}
+      var h=$("ownhint");if(h&&OWN.size)h.textContent="Les cartes de votre collection ("+OWN.size.toLocaleString("fr-FR")+" cartes"+(ownDate?", relevé du "+ownLabel():"")+") sont reconnues : cochées obtenues avec leur vraie rareté, et décochées si elles ont quitté votre collection.";
+    })();
+    return ownP;
+  }
+  /* Rapproche toute la liste du dernier relevé de collection : une carte obtenue depuis son ajout est cochée et reprend sa vraie rareté. */
+  async function reconcile(){
+    await loadOwned();if(!OWN||!OWN.size)return;
+    var got=0,fixed=0,lost=0;
+    st.cards.forEach(function(c){var o=OWN.get(key(c.t));
+      /* Absente du relevé : on décoche, sauf si vous l'avez cochée à la main après ce relevé (carte obtenue depuis). */
+      if(!o){if(c.o&&ownTime&&!(c.ot&&c.ot>ownTime)){c.o=0;delete c.ot;lost++}return}
+      if(!c.o){c.o=1;got++}delete c.ot;
+      if(c.r!==o[1]||c.e){if(c.r!==o[1])fixed++;c.r=o[1];delete c.e}});
+    if(!got&&!fixed&&!lost)return;
+    touch();
+    $("addmsg").textContent=(got?got+" carte"+(got>1?"s":"")+" de la liste "+(got>1?"sont":"est")+" maintenant dans votre collection : cochée"+(got>1?"s":"")+" obtenue"+(got>1?"s":"")+". ":"")+(lost?lost+" carte"+(lost>1?"s ne sont":" n'est")+" plus dans votre collection : décochée"+(lost>1?"s":"")+". ":"")+(fixed?fixed+" rareté"+(fixed>1?"s corrigées":" corrigée")+". ":"")+"Enregistrez pour publier.";
   }
   function parseTitle(line){
     var s=String(line).trim();if(!s)return "";
@@ -712,7 +732,7 @@ input[type=text],input[type=search],input[type=password],select,textarea{box-sha
       var it=el("div","item"+(c.o?" got":"")),ln=el("div","line");
       var ck=el("button","check","✓");ck.type="button";
       ck.setAttribute("aria-label",(c.o?"Marquer à trouver : ":"Marquer obtenue : ")+c.t);ck.setAttribute("aria-pressed",c.o?"true":"false");
-      ck.onclick=function(){c.o=c.o?0:1;touch()};
+      ck.onclick=function(){c.o=c.o?0:1;if(c.o)c.ot=Date.now();else delete c.ot;touch()};
       var th;if(c.i){th=el("img","thumb");th.loading="lazy";th.referrerPolicy="no-referrer";th.alt="";th.src=c.i}else th=el("div","thumb");
       var main=el("div","main"),a=el("a",null,c.t);a.href=wikiUrl(c.t);a.target="_blank";a.rel="noopener";main.append(a);
       if(c.d)main.append(el("span",null,c.d));
@@ -818,7 +838,7 @@ input[type=text],input[type=search],input[type=password],select,textarea{box-sha
     var j=await ghApi(cfg,"GET");sha=j.sha;
     saved=normalize(j.content?JSON.parse(b64decode(j.content)):clone(EMPTY));st=clone(saved);dirty=false;loaded=true;
     var d=ls(DKEY);if(d&&d.sha===sha&&d.st){st=normalize(d.st);dirty=true}else if(d)ls(DKEY,null);
-    owner=true;loadOwned();
+    owner=true;reconcile();
   }
   async function boot(){
     render();

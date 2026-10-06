@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wiki Masters → ma collection sur GitHub
 // @namespace    vivik88.cartes
-// @version      1.1
+// @version      1.2
 // @description  Une fois par jour, relit ma collection Wiki Masters et met à jour owned.json dans mon dépôt GitHub.
 // @match        https://www.wiki-masters.com/*
 // @match        https://wiki-masters.com/*
@@ -124,7 +124,7 @@
     if (running) return; running = true;
     try {
       say("démarrage…", true);
-      if (!cfg.token) { say("pas encore configuré. Ouvrez le menu de Tampermonkey puis « Configurer »."); return; }
+      if (!cfg.token) { say("pas encore configuré.", true); configure(); return; }
       var rows = GM_getValue("rows", null), lastFull = GM_getValue("lastFull", 0), added = null;
       if (!rows || full || Date.now() - lastFull > JOURS_COMPLET * 864e5) {
         rows = await readAll(); GM_setValue("lastFull", Date.now());
@@ -150,13 +150,41 @@
 
   GM_registerMenuCommand("Synchroniser maintenant", function () { sync(false); });
   GM_registerMenuCommand("Relecture complète", function () { sync(true); });
-  GM_registerMenuCommand("Configurer", function () {
-    var o = prompt("Compte GitHub :", cfg.owner); if (o === null) return;
-    var r = prompt("Dépôt :", cfg.repo); if (r === null) return;
-    var t = prompt("Clé d'accès GitHub (github_pat_…). Laissez vide pour garder l'actuelle :", ""); if (t === null) return;
-    cfg = { owner: o.trim(), repo: r.trim(), token: t.trim() || cfg.token }; GM_setValue("cfg", cfg);
-    say("configuration enregistrée.");
-  });
+  /* Formulaire de configuration affiché dans la page (plus fiable sur téléphone que les fenêtres de saisie du navigateur). */
+  function configure() {
+    var old = document.getElementById("wm-sync-cfg"); if (old) old.remove();
+    var wrap = document.createElement("div"); wrap.id = "wm-sync-cfg";
+    wrap.style.cssText = "position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:16px";
+    var f = document.createElement("form");
+    f.style.cssText = "width:100%;max-width:420px;background:#15171c;color:#eceef2;border:1px solid #2e313a;border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;font:15px/1.35 system-ui,sans-serif";
+    var title = document.createElement("strong"); title.textContent = "Collection → GitHub : configuration"; f.appendChild(title);
+    function field(label, value, type) {
+      var l = document.createElement("label"); l.style.cssText = "display:flex;flex-direction:column;gap:4px;font-size:13px;color:#9aa0ad"; l.appendChild(document.createTextNode(label));
+      var i = document.createElement("input"); i.type = type || "text"; i.value = value; i.autocapitalize = "off"; i.autocomplete = "off"; i.spellcheck = false;
+      i.style.cssText = "font:16px system-ui,sans-serif;padding:10px;border-radius:8px;border:1px solid #2e313a;background:#0e0f12;color:#eceef2;width:100%;box-sizing:border-box";
+      l.appendChild(i); f.appendChild(l); return i;
+    }
+    var o = field("Compte GitHub", cfg.owner), r = field("Dépôt", cfg.repo);
+    var t = field(cfg.token ? "Clé d'accès GitHub (laissez vide pour garder l'actuelle)" : "Clé d'accès GitHub (commence par github_pat_)", "", "text");
+    var msg = document.createElement("div"); msg.style.cssText = "font-size:13px;color:#ffb224;min-height:1.2em"; f.appendChild(msg);
+    var row = document.createElement("div"); row.style.cssText = "display:flex;gap:10px"; f.appendChild(row);
+    function button(text, primary) { var b = document.createElement("button"); b.textContent = text; b.type = primary ? "submit" : "button";
+      b.style.cssText = "flex:1;font:600 15px system-ui,sans-serif;padding:11px;border-radius:8px;border:1px solid " + (primary ? "#ffb224;background:#ffb224;color:#1d1400" : "#2e313a;background:transparent;color:#eceef2"); row.appendChild(b); return b; }
+    button("Fermer").onclick = function () { wrap.remove(); };
+    button("Enregistrer", true);
+    f.onsubmit = function (ev) {
+      ev.preventDefault();
+      var tok = t.value.trim() || cfg.token;
+      if (!o.value.trim() || !r.value.trim() || !tok) { msg.textContent = "Renseignez le compte, le dépôt et la clé."; return; }
+      cfg = { owner: o.value.trim(), repo: r.value.trim(), token: tok }; GM_setValue("cfg", cfg);
+      msg.textContent = "Vérification de la clé…";
+      gh("GET").then(function () { wrap.remove(); say("configuration enregistrée, la clé fonctionne. Lancement de la synchronisation."); sync(false); },
+        function (e) { if (e.status === 404 && /fichier/.test(e.message)) { /* dépôt accessible mais fichier absent : acceptable */ }
+          msg.textContent = "Enregistré, mais GitHub répond : " + e.message + ". Vérifiez le compte, le dépôt et la clé."; });
+    };
+    wrap.appendChild(f); (document.body || document.documentElement).appendChild(wrap); t.focus();
+  }
+  GM_registerMenuCommand("Configurer", configure);
 
   if (due()) setTimeout(function () { sync(false); }, 6000);
 })();

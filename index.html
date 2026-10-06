@@ -104,6 +104,10 @@ footer button{background:none;border:0;padding:6px 0;color:var(--muted);text-dec
 .ico{border-color:var(--line)}
 .ico[disabled]{opacity:.3;cursor:default}
 .editor{display:flex;flex-direction:column;gap:10px;padding:0 0 4px 40px}
+.picks{display:flex;flex-direction:column;max-height:320px;overflow-y:auto;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.picks label{flex-direction:row;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line);font-size:.95rem;font-weight:400;color:var(--fg);cursor:pointer}
+.picks label:last-child{border-bottom:0}
+.picks input{flex:none;width:20px;height:20px;accent-color:var(--accent)}
 .sugg{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .sugg button{text-align:left;background:var(--bg);border:0;border-bottom:1px solid var(--line);padding:10px 12px;cursor:pointer;min-height:42px}
 .sugg button:last-child{border-bottom:0}
@@ -259,6 +263,7 @@ input[type=text],input[type=search],input[type=password],select,textarea{box-sha
       <div class="ribbon" role="group" aria-label="Façon d'ajouter" style="margin-inline:-14px;padding-inline:14px">
         <button class="chip" type="button" data-m="one">Une carte</button>
         <button class="chip" type="button" data-m="many">Une liste</button>
+        <button class="chip" type="button" data-m="word">Mot dans le titre</button>
         <button class="chip" type="button" data-m="cat">Catégorie Wikipédia</button>
         <button class="chip" type="button" data-m="fam">Code de famille</button>
       </div>
@@ -269,6 +274,10 @@ input[type=text],input[type=search],input[type=password],select,textarea{box-sha
       <label data-for="many" hidden>Une carte par ligne (titres ou liens Wikipédia)
         <textarea id="many" placeholder="Gérardmer&#10;La Bresse&#10;https://fr.wikipedia.org/wiki/Remiremont"></textarea>
       </label>
+      <label data-for="word" hidden>Mot présent dans le titre de l'article
+        <input type="text" id="word" placeholder="Ex. Vivien" enterkeyhint="search">
+      </label>
+      <div class="picks" id="picks" hidden></div>
       <label data-for="cat" hidden>Nom ou lien de la catégorie Wikipédia
         <input type="text" id="cat" placeholder="Ex. Commune dans le département des Vosges">
       </label>
@@ -454,6 +463,32 @@ input[type=text],input[type=search],input[type=password],select,textarea{box-sha
     }while(cont&&++loops<6);
     return titles;
   }
+  /* Articles dont le titre contient le mot entier (« Vivien » ne ramène pas « Vivienne »). Plusieurs mots : tous doivent y être ; « -mot » exclut. */
+  async function wikiTitleSearch(query){
+    var need=[],avoid=[];query.split(/\s+/).forEach(function(w){if(!w)return;if(w.charAt(0)==="-"){if(w.length>1)avoid.push(key(w.slice(1)))}else need.push(key(w))});
+    if(!need.length)throw new Error("Saisissez un mot à chercher.");
+    var srsearch=need.map(function(w){return 'intitle:"'+w.replace(/"/g,"")+'"'}).join(" "),titles=[],cont={},loops=0;
+    do{
+      var data=await wikiGet(Object.assign({action:"query",list:"search",srsearch:srsearch,srnamespace:"0",srlimit:"500",srprop:"",srinfo:""},cont));
+      ((data.query||{}).search||[]).forEach(function(p){titles.push(p.title)});
+      cont=data.continue||null;
+    }while(cont&&++loops<10);
+    var seen=new Set();
+    return titles.filter(function(t){var words=key(t).split(/[^a-z0-9]+/);if(seen.has(t))return false;seen.add(t);
+      return need.every(function(w){return words.indexOf(w)>=0})&&!avoid.some(function(w){return words.indexOf(w)>=0})})
+      .sort(function(a,b){return key(a).localeCompare(key(b),"fr")});
+  }
+  var picks=null;
+  function renderPicks(){
+    var box=$("picks");box.textContent="";box.hidden=!(addMode==="word"&&picks&&picks.items.length);
+    if(box.hidden)return;
+    picks.items.forEach(function(it){var l=el("label"),c=el("input");c.type="checkbox";c.checked=it.on;
+      c.onchange=function(){it.on=c.checked;setAddLabel()};l.append(c,el("span",null,it.t+(it.have?" (déjà dans la liste)":"")));box.append(l)});
+  }
+  function setAddLabel(){
+    var n=picks?picks.items.filter(function(i){return i.on}).length:0;
+    $("addbtn").textContent={one:"Ajouter",many:"Ajouter la liste",cat:"Importer la catégorie",fam:"Importer la famille",word:picks?"Importer la sélection ("+n+")":"Chercher"}[addMode];
+  }
   async function loadOwned(){
     if(OWN)return;OWN=new Map();
     try{var r=await fetch("owned.json");if(!r.ok)return;var ow=(await r.json()).r;
@@ -584,7 +619,7 @@ input[type=text],input[type=search],input[type=password],select,textarea{box-sha
     var sub=$("sub");sub.textContent="";sub.append(el("b",null,todo)," à trouver · ",el("b",null,st.cards.length-todo)," obtenues");
     document.querySelectorAll("[data-m]").forEach(function(b){b.setAttribute("aria-pressed",b.dataset.m===addMode?"true":"false")});
     document.querySelectorAll("[data-for]").forEach(function(l){l.hidden=l.dataset.for.split(" ").indexOf(addMode)<0});
-    $("addbtn").textContent={one:"Ajouter",many:"Ajouter la liste",cat:"Importer la catégorie",fam:"Importer la famille"}[addMode];
+    setAddLabel();renderPicks();
     $("addbtn").disabled=busy;$("refresh").disabled=busy;
     $("refresh").hidden=!st.cards.some(function(c){return !c.m&&(!c.i||!c.r||c.d==null)});
     var counts={};st.cards.forEach(function(c){var g=c.g||"Sans étiquette";counts[g]=(counts[g]||0)+1});
@@ -751,7 +786,7 @@ input[type=text],input[type=search],input[type=password],select,textarea{box-sha
   });
   $("logout").onclick=function(){if(this.dataset.sure){ls(GKEY,null);ls(DKEY,null);location.reload()}else{this.dataset.sure="1";this.textContent="Confirmer la déconnexion"}};
 
-  document.querySelectorAll("[data-m]").forEach(function(b){b.onclick=function(){addMode=b.dataset.m;$("addmsg").textContent="";$("sugg").hidden=true;renderCards()}});
+  document.querySelectorAll("[data-m]").forEach(function(b){b.onclick=function(){addMode=b.dataset.m;picks=null;$("addmsg").textContent="";$("sugg").hidden=true;renderCards()}});
   var sgTimer=0,sgSeq=0;
   $("title").addEventListener("input",function(){var v=this.value.trim(),box=$("sugg");clearTimeout(sgTimer);
     if(v.length<2||/wikipedia\.org/.test(v)){box.hidden=true;return}
@@ -766,6 +801,16 @@ input[type=text],input[type=search],input[type=password],select,textarea{box-sha
     try{
       if(addMode==="one")entries=[{t:$("title").value}];
       else if(addMode==="many")entries=$("many").value.split(/\r?\n/).map(function(t){return {t:t}});
+      else if(addMode==="word"){
+        if(!picks||picks.q!==$("word").value.trim()){
+          say("Recherche sur Wikipédia…");var q=$("word").value.trim(),found=await wikiTitleSearch(q);
+          if(!found.length){picks=null;throw new Error("Aucun article dont le titre contient ce mot.")}
+          var have=new Set(st.cards.map(function(c){return key(c.t)}));
+          picks={q:q,items:found.map(function(t){var h=have.has(key(t));return {t:t,have:h,on:!h&&!/\((homonymie|prénom|patronyme)\)$/i.test(t)}})};
+          say(found.length+" article"+(found.length>1?"s trouvés":" trouvé")+". Décochez ceux que vous ne voulez pas, puis importez.");
+          busy=false;renderCards();return}
+        entries=picks.items.filter(function(i){return i.on}).map(function(i){return {t:i.t}});rar="";
+        if(!entries.length)throw new Error("Cochez au moins un article.")}
       else if(addMode==="cat"){if(!$("cat").value.trim())throw new Error("Saisissez le nom de la catégorie.");
         say("Lecture de la catégorie…");var ts=await wikiCategory($("cat").value);
         if(!ts.length)throw new Error("Cette catégorie est vide ou introuvable sur Wikipédia en français.");
@@ -778,6 +823,7 @@ input[type=text],input[type=search],input[type=password],select,textarea{box-sha
       if(res.own)msg+=" "+res.own+" déjà dans votre collection, cochée"+(res.own>1?"s":"")+" obtenue"+(res.own>1?"s":"")+".";
       if(res.miss)msg+=" "+res.miss+" sans article Wikipédia à ce nom : vérifiez le titre.";
       if(res.dup)msg+=" "+res.dup+" déjà dans la liste.";
+      if(res.added||addMode==="word"){picks=null;$("word").value=""}
       if(res.added){$("title").value="";$("many").value="";$("cat").value="";$("fam").value="";
         if(res.own===res.added)ui.s="all";else if(ui.s==="got")ui.s="todo"}
       say(msg);
@@ -791,6 +837,7 @@ input[type=text],input[type=search],input[type=password],select,textarea{box-sha
   document.querySelectorAll("[data-s]").forEach(function(b){b.onclick=function(){ui.s=b.dataset.s;keepUi();renderCards()}});
   document.querySelectorAll("[data-r]").forEach(function(b){b.onclick=function(){ui.r=b.dataset.r;renderCards()}});
   $("q").addEventListener("input",function(){ui.q=this.value;renderCards()});
+  $("word").addEventListener("input",function(){if(picks){picks=null;setAddLabel();renderPicks()}});
   $("sort").addEventListener("change",function(){ui.sort=this.value;keepUi();renderCards()});
   $("newtag").addEventListener("submit",function(ev){ev.preventDefault();var v=$("newtagname").value.trim().slice(0,60);
     if(!v||st.tags.some(function(t){return t.n===v}))return;

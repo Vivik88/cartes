@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex,nofollow">
 <title>Cartes recherchées Wiki Masters</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Figtree:wght@400;600;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Anta:wght@400;600;800&display=swap">
 <style>
 /* Visiteurs : étiquettes, recherche, rangées de cartes qui défilent par rareté. Propriétaire : onglets de gestion et barre d'enregistrement. */
 :root{
@@ -14,7 +14,7 @@
   --rC:#8b93a1; --rPC:#3fb37f; --rR:#4c9dff; --rSR:#b07cff; --rUR:#ff7a45; --rL:#ffcc33;
   --surface:color-mix(in srgb,var(--bg) 93%,var(--fg)); --line:color-mix(in srgb,var(--bg) 82%,var(--fg)); --muted:color-mix(in srgb,var(--fg) 62%,var(--bg));
   --display:"Unbounded","Arial Black",system-ui,sans-serif;
-  --body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --body:"Anta",system-ui,-apple-system,"Segoe UI",sans-serif;
   color-scheme:dark;
 }
 @media (prefers-color-scheme: light){ :root:not([data-fixed]){
@@ -571,7 +571,8 @@ input[type=text],input[type=search],input[type=password],select,textarea{box-sha
     if(pv.tag&&!st.tags.some(function(t){return t.n===pv.tag}))pv.tag=null;
     var pt=$("ptags");pt.textContent="";pt.hidden=!st.tags.length;
     [null].concat(st.tags).forEach(function(t){var n=t?t.n:null,b=el("button","chip");b.type="button";
-      b.append(el("span","nm",n||"Toutes"),el("small",null,t?(counts[n]||0):base.length));
+      var tot=st.cards.filter(function(c){return !t||c.g===n}),pct=tot.length?Math.round(tot.filter(function(c){return c.o}).length/tot.length*100):0;
+      b.append(el("span","nm",n||"Toutes"),el("small",null,pct+" %"));
       if(t){b.style.setProperty("--tc",t.c);b.style.setProperty("--tt",lum(t.c)>.4?"#15171c":"#ffffff")}
       b.setAttribute("aria-pressed",pv.tag===n?"true":"false");
       b.onclick=function(){pv.tag=n;renderPublic()};pt.append(b)});

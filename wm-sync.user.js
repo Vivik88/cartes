@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wiki Masters → ma collection sur GitHub
 // @namespace    vivik88.cartes
-// @version      1.3
+// @version      1.4
 // @description  Une fois par jour, relit ma collection Wiki Masters et met à jour owned.json dans mon dépôt GitHub.
 // @match        https://www.wiki-masters.com/*
 // @match        https://wiki-masters.com/*
@@ -56,16 +56,21 @@
   }
 
   /* Relecture complète : toutes les pages. */
+  /* Relecture complète : toutes les pages, des plus récentes aux plus anciennes (ordre stable, donc aucune carte sautée entre deux pages).
+     L'avancement est mémorisé toutes les 10 pages : si l'onglet est fermé ou mis en veille, la lecture reprend où elle s'était arrêtée. */
   async function readAll() {
-    var rows = {}, count = 0;
-    for (var n = 0; n < 600; n++) {
-      var part = await page("rarity", n);
+    var part0 = GM_getValue("partial", null), rows = {}, start = 0;
+    if (part0 && part0.rows && Date.now() - part0.t < 2 * 3600e3) { rows = part0.rows; start = Math.max(0, part0.next - 1); }
+    for (var n = start; n < 600; n++) {
+      var part = await page("recent", n);
       if (!part.length) break;
-      part.forEach(function (x) { rows[x.id] = x; }); count += part.length;
-      say("lecture complète, " + count + " cartes…", true);
+      part.forEach(function (x) { rows[x.id] = x; });
+      say("lecture complète, " + Object.keys(rows).length + " cartes…", true);
+      if (n % 10 === 9) GM_setValue("partial", { rows: rows, next: n + 1, t: Date.now() });
       await sleep(PAUSE_MS);
     }
-    if (!count) throw new Error("aucune carte lue (êtes-vous connecté ?)");
+    if (!Object.keys(rows).length) throw new Error("aucune carte lue (êtes-vous connecté ?)");
+    GM_setValue("partial", null);
     return rows;
   }
 
@@ -126,13 +131,10 @@
       say("démarrage…", true);
       if (!cfg.token) { say("pas encore configuré.", true); configure(); return; }
       var rows = GM_getValue("rows", null), lastFull = GM_getValue("lastFull", 0), added = null;
-      if (!rows || full || Date.now() - lastFull > JOURS_COMPLET * 864e5) {
+      if (!rows || full || GM_getValue("partial", null) || Date.now() - lastFull > JOURS_COMPLET * 864e5) {
         rows = await readAll(); GM_setValue("lastFull", Date.now());
       } else {
         added = await readRecent(rows);
-        var tot = await total(), have = Object.keys(rows).length, copies = 0;
-        Object.keys(rows).forEach(function (id) { copies += rows[id].n; });
-        if (tot && tot > have && tot > copies) { rows = await readAll(); GM_setValue("lastFull", Date.now()); added = null; }
       }
       GM_setValue("rows", rows); GM_setValue("lastSync", Date.now());
       var sent = await publish(rows), nb = Object.keys(rows).length;

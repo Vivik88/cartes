@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wiki Masters → ma collection sur GitHub
 // @namespace    vivik88.cartes
-// @version      1.5
+// @version      1.7
 // @description  Une fois par jour, relit ma collection Wiki Masters et met à jour owned.json dans mon dépôt GitHub.
 // @match        https://www.wiki-masters.com/*
 // @match        https://wiki-masters.com/*
@@ -48,7 +48,25 @@
     if (!r.ok) { var e = new Error("le site a répondu " + r.status); e.status = r.status; throw e; }
     var rows = (await r.json()).collection || [];
     return rows.filter(function (x) { return x && x.id && x.card && x.card.wikipedia_title; })
-      .map(function (x) { return { id: String(x.id), t: x.card.wikipedia_title, r: x.card.rarity || "C", n: Math.max(1, Number(x.count) || 1) }; });
+      .map(function (x) { return { id: String(x.id), t: x.card.wikipedia_title, r: x.card.rarity || "C", n: Math.max(1, Number(x.count) || 1), o: Date.parse(x.obtained_at || "") || 0 }; });
+  }
+
+  /* Tri « obtenues récemment » : c'est « added » sur Wiki Masters. Par sécurité, on vérifie qu'il renvoie bien les cartes de la plus
+     récente à la plus ancienne ; sinon on essaie d'autres noms plausibles. Le résultat est mémorisé. */
+  var CANDIDATS = ["added", "recent", "newest", "latest", "obtained_at", "-obtained_at", "obtained", "date", "date_desc", "new", "created_at", "-created_at"];
+  function desc(rows) { var ok = rows.filter(function (x) { return x.o; }); if (ok.length < 10) return false;
+    for (var i = 1; i < ok.length; i++) if (ok[i].o > ok[i - 1].o) return false; return ok[0].o > ok[ok.length - 1].o; }
+  async function recentSort() {
+    var known = GM_getValue("sortRecent", null);
+    if (known) return known;
+    /* Un nom de tri inconnu est ignoré par le site, qui renvoie alors l'ordre par rareté : on écarte tout ce qui ressemble à cet ordre. */
+    var base = (await page("rarity", 0)).map(function (x) { return x.id; }).join(","); await sleep(PAUSE_MS);
+    for (var i = 0; i < CANDIDATS.length; i++) {
+      var rows = await page(CANDIDATS[i], 0);
+      if (desc(rows) && rows.map(function (x) { return x.id; }).join(",") !== base) { GM_setValue("sortRecent", CANDIDATS[i]); return CANDIDATS[i]; }
+      await sleep(PAUSE_MS);
+    }
+    throw new Error("je ne trouve pas le tri par date d'obtention du site");
   }
   async function total() {
     try { var r = await fetch("/api/my-collection/stats?sort=rarity", { credentials: "include" }); if (!r.ok) return null; return Number((await r.json()).total) || null; }
@@ -62,7 +80,7 @@
     var part0 = GM_getValue("partial", null), rows = {}, start = 0;
     if (part0 && part0.rows && Date.now() - part0.t < 2 * 3600e3) { rows = part0.rows; start = Math.max(0, part0.next - 1); }
     for (var n = start; n < 600; n++) {
-      var part = await page("recent", n);
+      var part = await page(await recentSort(), n);
       if (!part.length) break;
       part.forEach(function (x) { rows[x.id] = x; });
       say("lecture complète, " + Object.keys(rows).length + " cartes…", true);
@@ -79,7 +97,7 @@
   async function readRecent(rows) {
     var added = 0;
     for (var n = 0; n < 600; n++) {
-      var part = await page("recent", n);
+      var part = await page(await recentSort(), n);
       if (!part.length) break;
       var fresh = 0;
       part.forEach(function (x) { if (!rows[x.id]) { fresh++; added++; } rows[x.id] = x; });
@@ -133,10 +151,11 @@
       say("vérification des " + n + " dernières cartes…", true);
       var recent = [];
       for (var p = 0; p * 50 < n; p++) {
-        var part = await page("recent", p); if (!part.length) break;
+        var part = await page(await recentSort(), p); if (!part.length) break;
         recent = recent.concat(part); await sleep(PAUSE_MS);
       }
       recent = recent.slice(0, n);
+      if (!desc(recent.slice(0, 50))) { GM_setValue("sortRecent", null); throw new Error("le tri par date ne répond plus correctement, relancez"); }
       var file = null, sha;
       try { var g = await gh("GET"); sha = g.sha; file = JSON.parse(b64dec(g.content)); } catch (e) { if (e.status !== 404) throw e; }
       if (!file || !file.r) file = { n: 0, r: {} };

@@ -314,7 +314,7 @@ input[type=text],input[type=search],input[type=password],select,textarea{box-sha
         <button class="btn primary" type="submit" id="addbtn">Ajouter</button>
         <button class="btn quiet" type="button" id="refresh">Compléter les infos manquantes</button>
         <button class="btn quiet danger" type="button" id="purge" hidden></button>
-        <button class="btn quiet" type="button" id="check">Vérifier mes 150 dernières cartes</button>
+        <button class="btn quiet" type="button" id="check">Vérifier mes 300 dernières cartes</button>
       </div>
       <p class="hint" id="addmsg" role="status"></p>
       <p class="hint">En rareté « Auto », elle est estimée d'après les vues de l'article sur 30 jours et affichée en pointillés.</p>
@@ -918,7 +918,7 @@ input[type=text],input[type=search],input[type=password],select,textarea{box-sha
   });
   /* Ouvre Wiki Masters dans un nouvel onglet : le script Tampermonkey y lit les 150 dernières cartes, met à jour le relevé et renvoie le résultat ici. */
   $("check").onclick=function(){
-    var w=window.open("https://www.wiki-masters.com/collection#wm-check-150","wmcheck");
+    var w=window.open("https://www.wiki-masters.com/collection#wm-check-300","wmcheck");
     $("addmsg").textContent=w?"Vérification en cours dans l'onglet Wiki Masters (le script Tampermonkey doit être installé dans ce navigateur)…":"Le navigateur a bloqué l'ouverture de l'onglet : autorisez les fenêtres pour ce site, puis réessayez.";
   };
   window.addEventListener("message",async function(e){

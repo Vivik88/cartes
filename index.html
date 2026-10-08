@@ -314,6 +314,7 @@ input[type=text],input[type=search],input[type=password],select,textarea{box-sha
         <button class="btn primary" type="submit" id="addbtn">Ajouter</button>
         <button class="btn quiet" type="button" id="refresh">Compléter les infos manquantes</button>
         <button class="btn quiet danger" type="button" id="purge" hidden></button>
+        <button class="btn quiet" type="button" id="check">Vérifier mes 150 dernières cartes</button>
       </div>
       <p class="hint" id="addmsg" role="status"></p>
       <p class="hint">En rareté « Auto », elle est estimée d'après les vues de l'article sur 30 jours et affichée en pointillés.</p>
@@ -914,6 +915,22 @@ input[type=text],input[type=search],input[type=password],select,textarea{box-sha
       say(msg);
     }catch(e){say(e.message||"L'ajout a échoué.")}
     busy=false;renderCards();
+  });
+  /* Ouvre Wiki Masters dans un nouvel onglet : le script Tampermonkey y lit les 150 dernières cartes, met à jour le relevé et renvoie le résultat ici. */
+  $("check").onclick=function(){
+    var w=window.open("https://www.wiki-masters.com/collection#wm-check-150","wmcheck");
+    $("addmsg").textContent=w?"Vérification en cours dans l'onglet Wiki Masters (le script Tampermonkey doit être installé dans ce navigateur)…":"Le navigateur a bloqué l'ouverture de l'onglet : autorisez les fenêtres pour ce site, puis réessayez.";
+  };
+  window.addEventListener("message",async function(e){
+    if(!/^https:\/\/(www\.)?wiki-masters\.com$/.test(e.origin)||!e.data||!e.data.wmCheck||!owner)return;
+    if(e.data.error){$("addmsg").textContent="La vérification a échoué : "+e.data.error+".";return}
+    await loadOwned();
+    (e.data.cards||[]).forEach(function(c){if(c&&c.t&&ORDER[c.r])OWN.set(key(c.t),[c.t,c.r])});
+    if(e.data.d){ownDate=e.data.d;ownTime=new Date(ownDate).getTime()||ownTime}
+    var before=$("addmsg").textContent;await reconcile();var after=$("addmsg").textContent;
+    var head=(e.data.cards||[]).length+" dernières cartes vérifiées, "+(e.data.added||0)+" nouvelle"+((e.data.added||0)>1?"s":"")+" dans le relevé. ";
+    $("addmsg").textContent=head+(after!==before?after:"Aucune carte de votre liste n'a changé.");
+    ui.tab="cards";render();
   });
   $("purge").onclick=function(){var n=st.cards.filter(function(c){return c.m}).length;st.cards=st.cards.filter(function(c){return !c.m});
     $("addmsg").textContent=n+" carte"+(n>1?"s retirées":" retirée")+". « Annuler » en bas de page les rétablit tant que vous n'avez pas enregistré.";touch()};

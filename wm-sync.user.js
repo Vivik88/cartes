@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wiki Masters → ma collection sur GitHub
 // @namespace    vivik88.cartes
-// @version      1.4
+// @version      1.5
 // @description  Une fois par jour, relit ma collection Wiki Masters et met à jour owned.json dans mon dépôt GitHub.
 // @match        https://www.wiki-masters.com/*
 // @match        https://wiki-masters.com/*
@@ -123,6 +123,47 @@
     return !same;
   }
 
+  /* ---------- Vérification des N dernières cartes, lancée depuis le site ----------
+     On lit les N cartes les plus récentes et on les ajoute au relevé publié (sans rien retirer), quel que soit l'appareil. */
+  function b64dec(s) { var bin = atob(String(s || "").replace(/\s/g, "")), b = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i); return new TextDecoder().decode(b); }
+  async function checkRecent(n) {
+    if (running) return null; running = true;
+    try {
+      if (!cfg.token) { say("pas encore configuré.", true); configure(); return null; }
+      say("vérification des " + n + " dernières cartes…", true);
+      var recent = [];
+      for (var p = 0; p * 50 < n; p++) {
+        var part = await page("recent", p); if (!part.length) break;
+        recent = recent.concat(part); await sleep(PAUSE_MS);
+      }
+      recent = recent.slice(0, n);
+      var file = null, sha;
+      try { var g = await gh("GET"); sha = g.sha; file = JSON.parse(b64dec(g.content)); } catch (e) { if (e.status !== 404) throw e; }
+      if (!file || !file.r) file = { n: 0, r: {} };
+      var where = {};
+      Object.keys(file.r).forEach(function (r) { file.r[r].forEach(function (t) { where[t] = r; }); });
+      var added = 0, moved = 0;
+      recent.forEach(function (x) {
+        var was = where[x.t];
+        if (was === x.r) return;
+        if (was) { file.r[was] = file.r[was].filter(function (t) { return t !== x.t; }); moved++; } else added++;
+        (file.r[x.r] = file.r[x.r] || []).push(x.t); where[x.t] = x.r;
+      });
+      var rows = GM_getValue("rows", null);
+      if (rows) { recent.forEach(function (x) { rows[x.id] = x; }); GM_setValue("rows", rows); }
+      if (added || moved) {
+        Object.keys(file.r).forEach(function (r) { file.r[r].sort(); });
+        file.n = Object.keys(where).length; file.d = new Date().toISOString();
+        await gh("PUT", { message: "Vérification des " + n + " dernières cartes", content: b64(JSON.stringify(file)), sha: sha });
+      }
+      say(recent.length + " cartes vérifiées : " + added + " ajoutée" + (added > 1 ? "s" : "") + " au relevé" + (moved ? ", " + moved + " rareté" + (moved > 1 ? "s" : "") + " corrigée" + (moved > 1 ? "s" : "") : "") + ".");
+      return { cards: recent.map(function (x) { return { t: x.t, r: x.r }; }), added: added, moved: moved, d: file.d || "" };
+    } catch (e) {
+      say("vérification impossible (" + (e.message || e) + ").");
+      return { error: String(e.message || e) };
+    } finally { running = false; }
+  }
+
   /* ---------- Synchronisation ---------- */
   var running = false;
   async function sync(full) {
@@ -188,5 +229,16 @@
   }
   GM_registerMenuCommand("Configurer", configure);
 
-  if (due()) setTimeout(function () { sync(false); }, 6000);
+  var asked = location.hash.match(/^#wm-check-(\d{1,4})$/);
+  if (asked) {
+    var n = Math.min(1000, Math.max(1, Number(asked[1])));
+    history.replaceState(null, "", location.pathname + location.search);
+    setTimeout(async function () {
+      var res = await checkRecent(n);
+      if (res && window.opener) {
+        try { window.opener.postMessage(Object.assign({ wmCheck: true }, res), "*"); } catch (e) {}
+        if (!res.error) { say((res.added || 0) + " ajoutée(s) au relevé. Retour sur votre site…"); setTimeout(function () { window.close(); }, 2500); }
+      }
+    }, 1500);
+  } else if (due()) setTimeout(function () { sync(false); }, 6000);
 })();

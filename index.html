@@ -218,6 +218,12 @@ input[type=text],input[type=search],input[type=password],select,textarea{box-sha
 #psub{zoom:.9}                     /* la ligne « possédées · souhaitées » */
 #p-pub>.cloud:not(#ptags){zoom:.8} /* la recherche et le bouton à côté */
 @media (min-width:700px){.ribbon{flex-wrap:wrap;overflow:visible}}
+/* Rangées à la souris : flèches et glisser */
+.railnav{display:none;gap:6px;margin-left:4px}
+@media (hover:hover) and (pointer:fine){.railnav{display:inline-flex}.rail{cursor:grab}.rail.dragging{cursor:grabbing;user-select:none}.rail.dragging .card{pointer-events:none}}
+.railbtn{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);color:var(--fg);font:600 1.2rem/1 var(--body);cursor:pointer;display:grid;place-items:center;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--surface) 86%,var(--fg)),var(--surface));box-shadow:inset 0 1px 0 var(--hi,rgba(255,255,255,.14)),0 3px 0 var(--edge,#000)}
+.railbtn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--edge,#000)}
 </style>
 </head>
 <body>
@@ -666,13 +672,28 @@ input[type=text],input[type=search],input[type=password],select,textarea{box-sha
       var head=el("div","rowhead "+(r||"X")),h=el("h2");h.append(el("span","rar "+(r||"X"),r||"?"),document.createTextNode(RNAME[r]));
       head.append(h,el("small",null,group.length));
       var rail=el("div","rail");group.forEach(function(c){rail.append(cardEl(c))});
-      box.append(head,rail);rails.push({el:rail,n:group.length,pos:0,hold:0,loop:false});
+      var rec={el:rail,n:group.length,pos:0,hold:0,loop:false};
+      var nav=el("span","railnav");
+      [["‹",-1,"Faire défiler vers la gauche"],["›",1,"Faire défiler vers la droite"]].forEach(function(a){var bt=el("button","railbtn",a[0]);bt.type="button";bt.setAttribute("aria-label",a[2]);
+        bt.onclick=function(){rec.hold=performance.now()+4000;rail.scrollBy({left:a[1]*rail.clientWidth*.8,behavior:"smooth"})};nav.append(bt)});
+      head.append(nav);enableDrag(rail,rec);
+      box.append(head,rail);rails.push(rec);
     });
     requestAnimationFrame(setupRails);
   }
   /* Défilement lent des rangées trop larges ; il s'arrête dès qu'on touche ou survole la rangée. */
   var still=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+  /* À la souris : on attrape une rangée et on la fait glisser. Un vrai glissement n'ouvre pas la carte sous le curseur. */
+  function enableDrag(rail,rec){
+    var startX=0,startL=0,down=false,moved=false;
+    rail.addEventListener("dragstart",function(e){e.preventDefault()});
+    rail.addEventListener("pointerdown",function(e){if(e.pointerType!=="mouse"||e.button!==0)return;down=true;moved=false;startX=e.clientX;startL=rail.scrollLeft;rec.hold=Infinity});
+    window.addEventListener("pointermove",function(e){if(!down)return;var dx=e.clientX-startX;if(Math.abs(dx)>5){moved=true;rail.classList.add("dragging")}if(moved)rail.scrollLeft=startL-dx});
+    window.addEventListener("pointerup",function(){if(!down)return;down=false;rail.classList.remove("dragging");if(!rail.matches(":hover"))rec.hold=performance.now()+2500});
+    rail.addEventListener("click",function(e){if(moved){e.preventDefault();e.stopPropagation();moved=false}},true);
+  }
   function setupRails(){
+    rails.forEach(function(r){var nav=r.el.previousElementSibling&&r.el.previousElementSibling.querySelector(".railnav");if(nav)nav.hidden=r.el.scrollWidth<=r.el.clientWidth+4});
     if(still)return;
     rails.forEach(function(r){
       if(r.loop||r.el.scrollWidth<=r.el.clientWidth+40)return;

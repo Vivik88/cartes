@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mes listes de cartes</title>
+<style>
+/* layout: une colonne étroite, barre de listes en haut, lignes à cocher */
+:root{
+  --bg:#f6f6f3; --fg:#1d1f1c; --mute:#6c7068; --line:#d9dad3; --row:#ffffff;
+  --ok:#2f7d32; --okbg:#e6f1e2; --ac:#2b4fb8; --danger:#b3261e;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#151614; --fg:#e7e8e3; --mute:#9a9d95; --line:#30322e; --row:#1d1f1c;
+  --ok:#7cc47f; --okbg:#1f2e1f; --ac:#8aa6ff; --danger:#ff8a80; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#151614; --fg:#e7e8e3; --mute:#9a9d95; --line:#30322e; --row:#1d1f1c;
+  --ok:#7cc47f; --okbg:#1f2e1f; --ac:#8aa6ff; --danger:#ff8a80; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 40px}
+.wrap{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+h1{font-size:15px;margin:0;font-family:var(--mono);font-weight:600;color:var(--mute)}
+button,input,textarea,select{font:inherit;color:inherit}
+button{background:var(--row);border:1px solid var(--line);border-radius:4px;padding:6px 10px;cursor:pointer}
+button:hover{border-color:var(--mute)}
+button:focus-visible,input:focus-visible,textarea:focus-visible,a:focus-visible{outline:2px solid var(--ac);outline-offset:1px}
+button.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+button.danger{color:var(--danger)}
+.bar{display:flex;flex-wrap:wrap;gap:6px}
+.tabs button{font-family:var(--mono);font-size:13px}
+.tabs button small{opacity:.7;margin-left:6px}
+input[type=search],input[type=text],textarea{background:var(--row);border:1px solid var(--line);border-radius:4px;padding:7px 9px;width:100%;box-sizing:border-box}
+textarea{min-height:160px;font-family:var(--mono);font-size:13px;resize:vertical}
+.head{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 14px}
+.head h2{margin:0;font-size:20px;text-wrap:balance}
+.count{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--mute)}
+.meter{height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--ok);width:0}
+.panel{border:1px solid var(--line);border-radius:4px;padding:12px;display:flex;flex-direction:column;gap:8px;background:var(--row)}
+.panel label{font-size:13px;color:var(--mute)}
+.hint{font-size:13px;color:var(--mute);margin:0}
+ul{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+li{display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line);padding:0 4px;min-height:40px}
+li label{flex:1;min-width:0;display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;overflow-wrap:anywhere}
+li input{width:18px;height:18px;flex:none;accent-color:var(--ok)}
+li.have{background:var(--okbg)}
+li.have span{color:var(--ok)}
+li a{color:var(--mute);text-decoration:none;font-size:13px;padding:8px 4px}
+li a:hover{color:var(--ac)}
+.empty{color:var(--mute);padding:16px 0}
+.msg{font-size:13px;color:var(--mute);min-height:1em}
+.err{color:var(--danger)}
+li .del{flex:none;border:none;background:none;color:var(--mute);padding:6px 4px;font-size:18px;line-height:1;min-width:30px;border-radius:4px}
+li .del:hover{color:var(--danger)}
+li .del.arm{color:var(--bg);background:var(--danger);font-size:12px;font-weight:600;padding:6px 8px}
+.toast{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:center;
+  background:var(--fg);color:var(--bg);font-size:14px;
+  padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.toast span{min-width:0;overflow-wrap:anywhere}
+.toast button{background:transparent;color:var(--bg);border-color:var(--bg);font-weight:600}
+.save{position:fixed;right:max(12px,env(safe-area-inset-right,0px));top:calc(8px + env(safe-area-inset-top,0px));font-family:var(--mono);font-size:12px;color:var(--mute);background:var(--bg);padding:2px 6px;border-radius:4px}
+.save.err{color:var(--danger)}
+.foot{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:20px}
+.foot button{font-size:12px;color:var(--mute)}
+li input:disabled+span{color:inherit}
+</style>
+<style>[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+</head>
+<body>
+
+<div class="toast" id="toast" hidden><span id="toastMsg"></span><button id="toastUndo">Annuler</button></div>
+
+<span class="save" id="save"></span>
+<div class="wrap">
+  <h1>Mes listes de cartes</h1>
+  <div class="bar tabs" id="tabs"></div>
+  <p class="msg" id="status">Chargement…</p>
+  <div class="panel" id="cfgPanel" hidden>
+    <p class="hint">Pour cocher depuis cet appareil, il faut ta clé d'accès GitHub (la même que pour ton ancien site). Elle reste sur cet appareil.</p>
+    <label for="cfgToken">Clé d'accès GitHub</label>
+    <input type="password" id="cfgToken" autocomplete="off">
+    <div class="bar"><button id="cfgSave">Enregistrer la clé</button><button id="cfgCancel">Fermer</button></div>
+    <p class="msg" id="cfgMsg"></p>
+  </div>
+
+  <div class="panel" id="newPanel" hidden>
+    <label for="newName">Nom de la liste</label>
+    <input type="text" id="newName" placeholder="Communes des Vosges">
+    <label for="newItems">Titres, un par ligne</label>
+    <textarea id="newItems" placeholder="Épinal&#10;Gérardmer&#10;La Bresse (Vosges)"></textarea>
+    <div class="bar"><button id="newSave">Créer la liste</button><button id="newCancel">Annuler</button></div>
+  </div>
+
+  <section id="view" hidden>
+    <div class="wrap">
+      <div class="head"><h2 id="lname"></h2><span class="count" id="lcount"></span></div>
+      <div class="meter"><i id="lmeter"></i></div>
+      <input type="search" id="q" placeholder="Rechercher un titre">
+      <div class="bar" id="filters">
+        <button data-f="all">Toutes</button><button data-f="miss">Manquantes</button><button data-f="have">Obtenues</button>
+      </div>
+      <div class="bar">
+        <button id="bEdit">Modifier les titres</button>
+        <button id="bBulk">Cocher une liste</button>
+        <button id="bCopy">Copier les manquantes</button>
+        <button id="bRename">Renommer</button>
+        <button id="bDel" class="danger">Supprimer</button>
+      </div>
+      <div class="panel" id="editPanel" hidden>
+        <label for="editItems">Titres de la liste, un par ligne (ajoute, retire ou réordonne)</label>
+        <textarea id="editItems"></textarea>
+        <div class="bar"><button id="editSave">Enregistrer</button><button id="editCancel">Annuler</button></div>
+      </div>
+      <div class="panel" id="bulkPanel" hidden>
+        <label for="bulkItems">Colle les titres que tu as obtenus, un par ligne : ils seront cochés</label>
+        <textarea id="bulkItems"></textarea>
+        <div class="bar"><button id="bulkSave">Cocher</button><button id="bulkCancel">Annuler</button></div>
+      </div>
+      <div class="panel" id="renamePanel" hidden>
+        <label for="renameName">Nouveau nom</label>
+        <input type="text" id="renameName">
+        <div class="bar"><button id="renameSave">Renommer</button><button id="renameCancel">Annuler</button></div>
+      </div>
+      <div class="panel" id="delPanel" hidden>
+        <p class="hint">Supprimer cette liste et toutes ses coches ? C'est définitif.</p>
+        <div class="bar"><button id="delYes" class="danger">Oui, supprimer</button><button id="delNo">Annuler</button></div>
+      </div>
+      <div class="panel" id="copyPanel" hidden>
+        <label for="copyOut">Sélectionne et copie</label>
+        <textarea id="copyOut" readonly></textarea>
+        <div class="bar"><button id="copyClose">Fermer</button></div>
+      </div>
+      <p class="msg" id="lmsg"></p>
+      <ul id="rows"></ul>
+    </div>
+  </section>
+  <div class="foot"><button id="bKey">Clé GitHub</button></div>
+</div>
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var FILE="listes.json", GKEY="wm-github", PKEY="wm-listes-pending";
+  function ls(k,v){try{if(v===undefined)return JSON.parse(localStorage.getItem(k)||"null");if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,JSON.stringify(v))}catch(e){}return null}
+  function lsRaw(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
+
+  // --- configuration GitHub (même clé que l'ancien site) ---
+  function guessRepo(){var m=location.hostname.match(/^([^.]+)\.github\.io$/i),seg=location.pathname.split("/").filter(Boolean)[0];
+    if(seg&&/\.html?$/i.test(seg))seg="";return {owner:m?m[1]:"vivik88",repo:seg||(m?m[1]+".github.io":"cartes")}}
+  var gh=ls(GKEY);
+  function canWrite(){return !!(gh&&gh.token)}
+
+  // --- état ---
+  var remote={v:1,lists:[]}, sha=null, pending=ls(PKEY)||[], view=null;
+  var cur=lsRaw("cl-cur"), filter=lsRaw("cl-filter")||"all";
+  var saving=false, again=false, saveTimer=null;
+
+  function clone(o){return JSON.parse(JSON.stringify(o))}
+  function norm(s){return s.normalize("NFC").replace(/\s+/g," ").trim()}
+  function parse(txt){var seen={},out=[];txt.split(/\r?\n/).forEach(function(l){l=norm(l);if(l&&!seen[l]){seen[l]=1;out.push(l)}});return out}
+  function fold(s){return s.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase()}
+  function find(d,id){for(var i=0;i<d.lists.length;i++)if(d.lists[i].id===id)return d.lists[i];return null}
+  function sorted(d){return d.lists.slice().sort(function(a,b){return String(a.name).localeCompare(String(b.name),"fr",{sensitivity:"base"})})}
+
+  // Une modification = une opération, rejouée sur la dernière version de GitHub au moment d'enregistrer.
+  function apply(d,op){
+    var L=find(d,op.id);
+    if(op.t==="new"){if(!L)d.lists.push({id:op.id,name:op.name,items:op.items.slice(),have:[]});return}
+    if(!L)return;
+    if(op.t==="tog"){var i=L.have.indexOf(op.title);if(op.v&&i<0)L.have.push(op.title);if(!op.v&&i>=0)L.have.splice(i,1)}
+    else if(op.t==="bulk"){op.titles.forEach(function(t){if(L.have.indexOf(t)<0)L.have.push(t)})}
+    else if(op.t==="rm"){var j=L.items.indexOf(op.title);if(j>=0)L.items.splice(j,1)}
+    else if(op.t==="ins"){if(L.items.indexOf(op.title)<0)L.items.splice(Math.min(op.at,L.items.length),0,op.title)}
+    else if(op.t==="items"){L.items=op.items.slice()}
+    else if(op.t==="name"){L.name=op.name}
+    else if(op.t==="del"){d.lists.splice(d.lists.indexOf(L),1)}
+  }
+  function rebuild(){view=clone(remote);pending.forEach(function(op){apply(view,op)})}
+  function act(op){
+    if(!canWrite()){showCfg("Pour enregistrer, ajoute d'abord ta clé GitHub sur cet appareil.");return false}
+    pending.push(op);ls(PKEY,pending);apply(view,op);setSave("Modifié…");
+    clearTimeout(saveTimer);saveTimer=setTimeout(save,1500);return true;
+  }
+
+  // --- GitHub ---
+  async function api(method,body){
+    var r=await fetch("https://api.github.com/repos/"+encodeURIComponent(gh.owner)+"/"+encodeURIComponent(gh.repo)+"/contents/"+FILE+(method==="GET"?"?t="+Date.now():""),
+      {method:method,headers:{"Accept":"application/vnd.github+json","Authorization":"Bearer "+gh.token,"X-GitHub-Api-Version":"2022-11-28"},body:body?JSON.stringify(body):undefined});
+    var j=null;try{j=await r.json()}catch(e){}
+    if(!r.ok){var err=new Error((j&&j.message)||("GitHub a répondu "+r.status));err.status=r.status;throw err}
+    return j;
+  }
+  function b64encode(s){var b=new TextEncoder().encode(s),bin="";for(var i=0;i<b.length;i+=0x8000)bin+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000));return btoa(bin)}
+  function b64decode(s){var bin=atob(s.replace(/\s/g,"")),b=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)b[i]=bin.charCodeAt(i);return new TextDecoder().decode(b)}
+  function ghError(e){return e.status===401?"Clé refusée : elle est peut-être expirée ou mal copiée."
+    :e.status===403?"La clé n'a pas le droit d'écrire dans le dépôt (permission « Contents » en lecture et écriture)."
+    :e.status===404?"Fichier "+FILE+" introuvable dans "+gh.owner+"/"+gh.repo+"."
+    :"GitHub ne répond pas ("+(e.message||"erreur réseau")+")."}
+  async function fetchRemote(){
+    var j=await api("GET");sha=j.sha;remote=JSON.parse(b64decode(j.content));
+    if(!remote.lists)remote.lists=[];
+  }
+  async function save(){
+    if(!pending.length||!canWrite())return;
+    if(saving){again=true;return}
+    saving=true;setSave("Enregistrement…");
+    var n=pending.length;
+    for(var attempt=0;attempt<3;attempt++){
+      try{
+        var next=clone(remote);pending.slice(0,n).forEach(function(op){apply(next,op)});
+        var txt=JSON.stringify(next,null,1);
+        var r=await api("PUT",{message:"Listes : mise à jour",content:b64encode(txt),sha:sha||undefined});
+        sha=r.content.sha;remote=next;pending=pending.slice(n);ls(PKEY,pending.length?pending:null);
+        setSave(pending.length?"Modifié…":"Enregistré ✓");break;
+      }catch(e){
+        if(e.status===409||e.status===422){try{await fetchRemote();continue}catch(e2){e=e2}}
+        setSave("Non enregistré",true);$("status").textContent=ghError(e)+" Tes modifications restent sur cet appareil et seront renvoyées.";$("status").className="msg err";
+        break;
+      }
+    }
+    saving=false;
+    if(again||pending.length){again=false;if(pending.length){clearTimeout(saveTimer);saveTimer=setTimeout(save,1500)}}
+  }
+  function setSave(t,err){$("save").textContent=t;$("save").className="save"+(err?" err":"")}
+  window.addEventListener("pagehide",function(){if(pending.length)save()});
+  document.addEventListener("visibilitychange",function(){if(document.hidden&&pending.length)save()});
+
+  // --- affichage ---
+  function L(){return view&&cur?find(view,cur):null}
+  function stats(l){var h={},n=0;l.have.forEach(function(t){h[t]=1});l.items.forEach(function(t){if(h[t])n++});return{n:l.items.length,h:n,set:h}}
+  function renderTabs(){
+    var el=$("tabs");el.textContent="";
+    sorted(view).forEach(function(l){var s=stats(l);var b=document.createElement("button");
+      b.textContent=l.name||"Sans nom";var sm=document.createElement("small");sm.textContent=s.h+"/"+s.n;b.appendChild(sm);
+      if(l.id===cur)b.className="on";b.onclick=function(){select(l.id)};el.appendChild(b)});
+    if(canWrite()){var add=document.createElement("button");add.textContent="+ Nouvelle liste";
+      add.onclick=function(){$("newPanel").hidden=false;$("newName").focus()};el.appendChild(add)}
+  }
+  function renderHead(){
+    var l=L();if(!l)return;var s=stats(l);
+    $("lname").textContent=l.name||"Sans nom";
+    var pct=s.n?Math.round(s.h*100/s.n):0;
+    $("lcount").textContent=s.h+" / "+s.n+" · "+pct+" % · "+(s.n-s.h)+" manquantes";
+    $("lmeter").style.width=(s.n?s.h*100/s.n:0)+"%";
+    [].forEach.call($("filters").children,function(b){b.className=b.dataset.f===filter?"on":""});
+    ["bEdit","bBulk","bRename","bDel"].forEach(function(id){$(id).hidden=!canWrite()});
+  }
+  function renderRows(){
+    var l=L(),ul=$("rows");ul.textContent="";if(!l)return;
+    var h=stats(l).set,q=fold($("q").value.trim()),frag=document.createDocumentFragment(),shown=0,w=canWrite();
+    l.items.forEach(function(t){
+      var got=!!h[t];
+      if(filter==="miss"&&got)return;if(filter==="have"&&!got)return;
+      if(q&&fold(t).indexOf(q)<0)return;
+      shown++;
+      var li=document.createElement("li");if(got)li.className="have";
+      var lab=document.createElement("label");var cb=document.createElement("input");cb.type="checkbox";cb.checked=got;cb.disabled=!w;
+      cb.onchange=function(){toggle(l.id,t,cb.checked);li.className=cb.checked?"have":""};
+      var sp=document.createElement("span");sp.textContent=t;lab.appendChild(cb);lab.appendChild(sp);
+      if(w){
+        var del=document.createElement("button");del.className="del";del.textContent="×";del.title="Retirer ce titre de la liste";del.setAttribute("aria-label","Retirer "+t);
+        del.onclick=function(){
+          if(del.classList.contains("arm")){removeItem(l.id,t);return}
+          disarmAll();del.classList.add("arm");del.textContent="Retirer ?";
+          del._t=setTimeout(function(){del.classList.remove("arm");del.textContent="×"},3000);
+        };
+        li.appendChild(del);
+      }
+      var a=document.createElement("a");a.href="https://fr.wikipedia.org/wiki/"+encodeURIComponent(t.replace(/ /g,"_"));a.target="_blank";a.rel="noopener";a.textContent="wiki ↗";a.title="Ouvrir la page Wikipédia";
+      li.appendChild(lab);li.appendChild(a);frag.appendChild(li);
+    });
+    ul.appendChild(frag);
+    if(!shown){var e=document.createElement("li");e.className="empty";e.textContent=l.items.length?"Aucun titre ne correspond.":"Liste vide : clique sur « Modifier les titres » pour en ajouter.";ul.appendChild(e)}
+  }
+  function renderAll(){
+    if(!L()){var s=sorted(view);cur=s.length?s[0].id:null}
+    renderTabs();$("view").hidden=!cur;if(cur){renderHead();renderRows()}
+  }
+  function select(id){cur=id;lsRaw("cl-cur",id);closePanels();$("q").value="";renderAll()}
+  function closePanels(){["editPanel","bulkPanel","renamePanel","delPanel","copyPanel"].forEach(function(p){$(p).hidden=true});$("lmsg").textContent=""}
+
+  // --- bandeau « Annuler » ---
+  var toastTimer=null,undoFn=null;
+  function showToast(msg,undo){
+    $("toastMsg").textContent=msg;undoFn=undo;$("toast").hidden=false;
+    clearTimeout(toastTimer);toastTimer=setTimeout(function(){$("toast").hidden=true;undoFn=null},6000);
+  }
+  $("toastUndo").onclick=function(){var f=undoFn;undoFn=null;$("toast").hidden=true;if(f)f()};
+  function disarmAll(){[].forEach.call(document.querySelectorAll("li .del.arm"),function(b){clearTimeout(b._t);b.classList.remove("arm");b.textContent="×"})}
+
+  function toggle(id,t,v,silent){
+    if(!act({t:"tog",id:id,title:t,v:v}))return;
+    renderTabs();renderHead();
+    if(!silent)showToast((v?"Coché : ":"Décoché : ")+t,function(){toggle(id,t,!v,true);if(id===cur)renderRows()});
+  }
+  function removeItem(id,t){
+    var l=find(view,id),at=l.items.indexOf(t);if(at<0)return;
+    if(!act({t:"rm",id:id,title:t}))return;renderAll();
+    showToast("Retiré : "+t,function(){act({t:"ins",id:id,title:t,at:at});renderAll()});
+  }
+
+  // --- boutons ---
+  $("newCancel").onclick=function(){$("newPanel").hidden=true};
+  $("newSave").onclick=function(){
+    var name=norm($("newName").value),items=parse($("newItems").value);if(!name){$("newName").focus();return}
+    var id="l"+Date.now().toString(36);
+    if(act({t:"new",id:id,name:name,items:items})){$("newName").value="";$("newItems").value="";$("newPanel").hidden=true;select(id)}
+  };
+  [].forEach.call($("filters").children,function(b){b.onclick=function(){filter=b.dataset.f;lsRaw("cl-filter",filter);renderHead();renderRows()}});
+  var qt;$("q").oninput=function(){clearTimeout(qt);qt=setTimeout(renderRows,120)};
+  $("bEdit").onclick=function(){closePanels();$("editItems").value=L().items.join("\n");$("editPanel").hidden=false};
+  $("editCancel").onclick=closePanels;
+  $("editSave").onclick=function(){var items=parse($("editItems").value);if(act({t:"items",id:cur,items:items})){closePanels();renderAll();$("lmsg").textContent=items.length+" titres enregistrés."}};
+  $("bBulk").onclick=function(){closePanels();$("bulkItems").value="";$("bulkPanel").hidden=false;$("bulkItems").focus()};
+  $("bulkCancel").onclick=closePanels;
+  $("bulkSave").onclick=function(){
+    var l=L(),idx={},ok=[],miss=[];l.items.forEach(function(t){idx[fold(t)]=t});
+    parse($("bulkItems").value).forEach(function(t){var r=idx[fold(t)];if(r)ok.push(r);else miss.push(t)});
+    closePanels();if(ok.length)act({t:"bulk",id:cur,titles:ok});renderAll();
+    $("lmsg").textContent=ok.length+" cochés."+(miss.length?" Absents de la liste : "+miss.slice(0,20).join(", ")+(miss.length>20?"…":""):"");
+  };
+  $("bRename").onclick=function(){closePanels();$("renameName").value=L().name||"";$("renamePanel").hidden=false;$("renameName").focus()};
+  $("renameCancel").onclick=closePanels;
+  $("renameSave").onclick=function(){var n=norm($("renameName").value);if(n&&act({t:"name",id:cur,name:n})){closePanels();renderAll()}};
+  $("bDel").onclick=function(){closePanels();$("delPanel").hidden=false};
+  $("delNo").onclick=closePanels;
+  $("delYes").onclick=function(){if(act({t:"del",id:cur})){cur=null;closePanels();renderAll()}};
+  $("bCopy").onclick=function(){
+    var l=L(),h=stats(l).set,txt=l.items.filter(function(t){return!h[t]}).join("\n");
+    function fallback(){closePanels();$("copyOut").value=txt;$("copyPanel").hidden=false;$("copyOut").focus();$("copyOut").select()}
+    try{navigator.clipboard.writeText(txt).then(function(){closePanels();$("lmsg").textContent=txt.split("\n").filter(Boolean).length+" titres copiés."},fallback)}catch(e){fallback()}
+  };
+  $("copyClose").onclick=closePanels;
+
+  // --- clé GitHub ---
+  function showCfg(msg){$("cfgPanel").hidden=false;$("cfgMsg").textContent=msg||"";$("cfgToken").value=gh&&gh.token?gh.token:"";$("cfgToken").focus()}
+  $("bKey").onclick=function(){showCfg()};
+  $("cfgCancel").onclick=function(){$("cfgPanel").hidden=true};
+  $("cfgSave").onclick=async function(){
+    var t=$("cfgToken").value.trim();if(!t){$("cfgToken").focus();return}
+    var g=guessRepo(),prev=gh;gh={owner:(prev&&prev.owner)||g.owner,repo:(prev&&prev.repo)||g.repo,token:t};
+    $("cfgMsg").textContent="Vérification…";
+    try{await fetchRemote();ls(GKEY,gh);$("cfgPanel").hidden=true;rebuild();renderAll();$("status").textContent="";if(pending.length)save()}
+    catch(e){$("cfgMsg").textContent=ghError(e);gh=prev}
+  };
+
+  // --- démarrage ---
+  async function boot(){
+    try{
+      if(canWrite()){
+        try{await fetchRemote()}
+        catch(e){if(e.status===401||e.status===403){$("status").textContent=ghError(e);$("status").className="msg err";gh=null}else throw e}
+      }
+      if(!canWrite()){
+        var r=await fetch(FILE+"?t="+Date.now());if(!r.ok)throw new Error("HTTP "+r.status);remote=await r.json();
+        if(!$("status").textContent||$("status").textContent==="Chargement…")$("status").textContent="Lecture seule sur cet appareil. Clique sur « Clé GitHub » en bas pour pouvoir cocher.";
+      }else $("status").textContent="";
+      rebuild();renderAll();
+      if(pending.length&&canWrite())save();
+    }catch(e){$("status").textContent="Impossible de charger les listes ("+(e.message||"erreur")+"). Recharge la page.";$("status").className="msg err"}
+  }
+  boot();
+})();
+</script>
+</body>
+</html>

@@ -137,6 +137,16 @@ li.empty{justify-content:center;color:var(--mute);font-family:var(--mono)}
   h1{animation:flick 4s linear infinite}
   @keyframes flick{0%,92%,100%{opacity:1}93%{opacity:.55}94%{opacity:1}96%{opacity:.7}97%{opacity:1}}
 }
+/* barre de lettres : reste en haut de l'écran pendant le défilement */
+.az{position:sticky;top:env(safe-area-inset-top,0px);z-index:15;display:grid;grid-template-columns:repeat(auto-fill,minmax(36px,1fr));gap:4px;padding:8px 0;margin:2px 0 0;
+  background:linear-gradient(180deg,rgba(5,4,10,.97) 80%,rgba(5,4,10,0))}
+.az button{--c:var(--lc);min-width:0;padding:8px 0;font:700 .78rem/1 var(--display);letter-spacing:0;text-align:center;
+  clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px)}
+.az button.wide{font-size:.62rem}
+.az button:disabled{--c:#3a3560;color:#3a3560;box-shadow:none;cursor:default;background:rgba(9,7,26,.6)}
+li.jump{animation:jump 1.2s ease-out}
+@keyframes jump{0%{box-shadow:inset 0 0 0 2px var(--lc),0 0 22px var(--lc)}100%{box-shadow:none}}
+@media (max-width:520px){.az{grid-template-columns:repeat(9,1fr)}.az button{font-size:.72rem}.az button.wide{font-size:.58rem}}
 </style>
 
 </head>
@@ -205,6 +215,7 @@ li.empty{justify-content:center;color:var(--mute);font-family:var(--mono)}
         <div class="bar"><button id="copyClose">Fermer</button></div>
       </div>
       <p class="msg" id="lmsg"></p>
+      <nav class="az" id="az" aria-label="Aller à la lettre"></nav>
       <ul id="rows"></ul>
     </div>
   </section>
@@ -304,6 +315,29 @@ li.empty{justify-content:center;color:var(--mute);font-family:var(--mono)}
   var PAL=["#22e6ff","#a96bff","#c6ff3d","#ff8a1f","#3d8bff","#ff4fd8","#39ff88","#ffe14d"];
   function colorOf(l){if(COL[l.id])return COL[l.id];var h=0;for(var i=0;i<l.id.length;i++)h=(h*31+l.id.charCodeAt(i))>>>0;return PAL[h%PAL.length]}
   function L(){return view&&cur?find(view,cur):null}
+  // Lettre d'un titre pour la barre A-Z. On saute les débuts communs (« Équipe de », « Ambassade de France en », « Drapeau du »…)
+  // pour classer sur le nom du pays ; tout ce qui ne commence pas par une lettre va dans « 0-9 ».
+  var LETTERS=["0-9"].concat("ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""));
+  var PREFIX=/^(?:(?:é|e)quipe|ambassade de france|drapeau(?: et armoiries)?)\s+(?:de la |de l'|de l’|d'|d’|de |du |des |en |au |aux |à |a |près le |pres le )?/i;
+  function letterOf(t){
+    var s=t.replace(PREFIX,"");
+    var c=s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").charAt(0).toUpperCase();
+    return c>="A"&&c<="Z"?c:"0-9";
+  }
+  var azBuilt=false;
+  function buildAz(){
+    if(azBuilt)return;azBuilt=true;var nav=$("az");
+    LETTERS.forEach(function(k){var b=document.createElement("button");b.type="button";b.textContent=k;b.dataset.k=k;if(k==="0-9")b.className="wide";
+      b.setAttribute("aria-label",k==="0-9"?"Aller aux titres qui commencent par un chiffre ou un signe":"Aller à la lettre "+k);
+      b.onclick=function(){
+        var li=document.querySelector('#rows li[data-k="'+k+'"]');if(!li)return;
+        var top=li.getBoundingClientRect().top+window.pageYOffset-$("az").offsetHeight-8;
+        window.scrollTo({top:top,behavior:"smooth"});
+        li.classList.remove("jump");void li.offsetWidth;li.classList.add("jump");
+      };
+      nav.appendChild(b)});
+  }
+  function updateAz(found){buildAz();[].forEach.call($("az").children,function(b){b.disabled=!found[b.dataset.k]})}
   function stats(l){var h={},n=0;l.have.forEach(function(t){h[t]=1});l.items.forEach(function(t){if(h[t])n++});return{n:l.items.length,h:n,set:h}}
   function renderTabs(){
     var el=$("tabs");el.textContent="";
@@ -326,13 +360,14 @@ li.empty{justify-content:center;color:var(--mute);font-family:var(--mono)}
   }
   function renderRows(){
     var l=L(),ul=$("rows");ul.textContent="";if(!l)return;
-    var h=stats(l).set,q=fold($("q").value.trim()),frag=document.createDocumentFragment(),shown=0,w=canWrite();
+    var h=stats(l).set,q=fold($("q").value.trim()),frag=document.createDocumentFragment(),shown=0,w=canWrite(),found={};
     l.items.forEach(function(t){
       var got=!!h[t];
       if(filter==="miss"&&got)return;if(filter==="have"&&!got)return;
       if(q&&fold(t).indexOf(q)<0)return;
       shown++;
       var li=document.createElement("li");if(got)li.className="have";
+      var k=letterOf(t);li.dataset.k=k;found[k]=1;
       var lab=document.createElement("label");var cb=document.createElement("input");cb.type="checkbox";cb.checked=got;cb.disabled=!w;
       cb.onchange=function(){toggle(l.id,t,cb.checked);li.className=cb.checked?"have":""};
       var sp=document.createElement("span");sp.textContent=t;lab.appendChild(cb);lab.appendChild(sp);
@@ -348,7 +383,7 @@ li.empty{justify-content:center;color:var(--mute);font-family:var(--mono)}
       var a=document.createElement("a");a.href="https://fr.wikipedia.org/wiki/"+encodeURIComponent(t.replace(/ /g,"_"));a.target="_blank";a.rel="noopener";a.textContent="wiki ↗";a.title="Ouvrir la page Wikipédia";
       li.appendChild(lab);li.appendChild(a);frag.appendChild(li);
     });
-    ul.appendChild(frag);
+    ul.appendChild(frag);updateAz(found);
     if(!shown){var e=document.createElement("li");e.className="empty";e.textContent=l.items.length?"Aucun titre ne correspond.":"Liste vide : clique sur « Modifier les titres » pour en ajouter.";ul.appendChild(e)}
   }
   function renderAll(){

@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Wiki Masters → ma collection sur GitHub
 // @namespace    vivik88.cartes
-// @version      1.7
-// @description  Une fois par jour, relit ma collection Wiki Masters et met à jour owned.json dans mon dépôt GitHub.
+// @version      1.8
+// @description  Une fois par jour, relit ma collection Wiki Masters et met à jour owned.json dans mon dépôt GitHub (seulement les cartes qui ont au moins une étiquette).
 // @match        https://www.wiki-masters.com/*
 // @match        https://wiki-masters.com/*
 // @grant        GM_getValue
@@ -22,6 +22,7 @@
   var PAUSE_MS = 700;        // pause entre deux pages demandées au site
   var JOURS_COMPLET = 7;     // relecture complète au plus tous les N jours (détecte les cartes vendues ou échangées)
   var FICHIER = "owned.json";
+  var SANS_ETIQUETTE = false; // false : les cartes sans étiquette sont ignorées dans le relevé. true : on garde tout, comme avant.
 
   var cfg = GM_getValue("cfg", { owner: "vivik88", repo: "cartes", token: "" });
   var sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
@@ -48,7 +49,7 @@
     if (!r.ok) { var e = new Error("le site a répondu " + r.status); e.status = r.status; throw e; }
     var rows = (await r.json()).collection || [];
     return rows.filter(function (x) { return x && x.id && x.card && x.card.wikipedia_title; })
-      .map(function (x) { return { id: String(x.id), t: x.card.wikipedia_title, r: x.card.rarity || "C", n: Math.max(1, Number(x.count) || 1), o: Date.parse(x.obtained_at || "") || 0 }; });
+      .map(function (x) { return { id: String(x.id), t: x.card.wikipedia_title, r: x.card.rarity || "C", n: Math.max(1, Number(x.count) || 1), o: Date.parse(x.obtained_at || "") || 0, g: (x.tags && x.tags.length) ? 1 : 0 }; });
   }
 
   /* Tri « obtenues récemment » : c'est « added » sur Wiki Masters. Par sécurité, on vérifie qu'il renvoie bien les cartes de la plus
@@ -126,9 +127,11 @@
     });
   }
   function b64(s) { var b = new TextEncoder().encode(s), bin = ""; for (var i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(bin); }
+  /* Une carte compte si elle a au moins une étiquette (ou si le réglage SANS_ETIQUETTE est à true). */
+  function keep(x) { return SANS_ETIQUETTE || x.g === 1; }
   function buildOwned(rows) {
     var seen = {}, out = { C: [], PC: [], R: [], SR: [], UR: [], L: [] }, n = 0;
-    Object.keys(rows).forEach(function (id) { var x = rows[id]; if (seen[x.t]) return; seen[x.t] = 1; (out[x.r] = out[x.r] || []).push(x.t); n++; });
+    Object.keys(rows).forEach(function (id) { var x = rows[id]; if (!keep(x) || seen[x.t]) return; seen[x.t] = 1; (out[x.r] = out[x.r] || []).push(x.t); n++; });
     Object.keys(out).forEach(function (r) { out[r].sort(); });
     return JSON.stringify({ n: n, d: new Date().toISOString(), r: out });
   }
@@ -163,6 +166,7 @@
       Object.keys(file.r).forEach(function (r) { file.r[r].forEach(function (t) { where[t] = r; }); });
       var added = 0, moved = 0;
       recent.forEach(function (x) {
+        if (!keep(x)) return;
         var was = where[x.t];
         if (was === x.r) return;
         if (was) { file.r[was] = file.r[was].filter(function (t) { return t !== x.t; }); moved++; } else added++;
@@ -191,8 +195,9 @@
       say("démarrage…", true);
       if (!cfg.token) { say("pas encore configuré.", true); configure(); return; }
       var rows = GM_getValue("rows", null), lastFull = GM_getValue("lastFull", 0), added = null;
-      if (!rows || full || GM_getValue("partial", null) || Date.now() - lastFull > JOURS_COMPLET * 864e5) {
-        rows = await readAll(); GM_setValue("lastFull", Date.now());
+      var needTags = !GM_getValue("tagsKnown", false);
+      if (!rows || full || needTags || GM_getValue("partial", null) || Date.now() - lastFull > JOURS_COMPLET * 864e5) {
+        rows = await readAll(); GM_setValue("lastFull", Date.now()); GM_setValue("tagsKnown", true);
       } else {
         added = await readRecent(rows);
       }

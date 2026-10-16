@@ -171,6 +171,26 @@ body.toast-on .totop{bottom:calc(74px + env(safe-area-inset-bottom,0px))}
 .mbox input{accent-color:var(--ok);width:18px;height:18px;flex:none}
 .mbox .bar{position:sticky;bottom:-18px;padding:10px 0 2px;background:linear-gradient(180deg,transparent,var(--panel2) 30%)}
 #checkApply{--c:var(--ok)}
+/* onglet « À vendre » (visible seulement avec la clé GitHub) */
+.tabs button.vtab{--c:#c6ff3d}
+#venteView{--lc:#c6ff3d}
+.vhead h2{color:#c6ff3d}
+.dz{grid-template-columns:repeat(auto-fill,minmax(52px,1fr))}
+.dz button{font:700 .72rem/1 var(--mono)}
+.dgroup{margin-top:14px}
+.dgroup h3{display:flex;align-items:baseline;gap:10px;margin:0 0 6px;padding:8px 12px;font:800 .95rem/1.1 var(--display);letter-spacing:.05em;text-transform:uppercase;color:#c6ff3d;
+  background:linear-gradient(90deg,rgba(198,255,61,.14),transparent 70%);border-left:3px solid #c6ff3d}
+.dgroup h3 b{font:400 .95rem var(--mono);color:#fff}
+.dgroup h3 small{margin-left:auto;font:400 .75rem var(--mono);color:var(--mute);letter-spacing:0;text-transform:none}
+.vrow{display:flex;align-items:center;gap:10px;min-height:42px;padding:6px 10px;margin-bottom:5px;background:linear-gradient(90deg,rgba(20,16,41,.92),rgba(9,7,26,.92));border:1px solid rgba(255,255,255,.08);
+  clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)}
+.vrow span.t{flex:1;min-width:0;font:600 1rem/1.2 var(--name);color:#fff;overflow-wrap:anywhere}
+.vrow span.t i{display:block;font:400 .74rem/1.3 var(--mono);font-style:normal;color:var(--mute)}
+.vrow .rar{flex:none;min-width:30px;text-align:center;padding:3px 5px;font:700 .7rem var(--display);border:1px solid currentColor}
+.rar.C{color:#8f8aa8}.rar.PC{color:#22e6ff}.rar.R{color:#3d8bff}.rar.SR{color:#ff2bd6}.rar.UR{color:#ff8a1f}.rar.L{color:#ffe14d}
+.vrow .nb{flex:none;font:400 .8rem var(--mono);color:#c6ff3d}
+.vrow a{flex:none;color:var(--mute);text-decoration:none;font:400 .74rem var(--mono)}
+.vrow a:hover{color:var(--cy)}
 </style>
 
 </head>
@@ -208,6 +228,16 @@ body.toast-on .totop{bottom:calc(74px + env(safe-area-inset-bottom,0px))}
     <textarea id="newItems" placeholder="Épinal&#10;Gérardmer&#10;La Bresse (Vosges)"></textarea>
     <div class="bar"><button id="newSave">Créer la liste</button><button id="newCancel">Annuler</button></div>
   </div>
+
+  <section id="venteView" hidden>
+    <div class="wrap">
+      <div class="head vhead"><h2>Cartes à vendre</h2><span class="count" id="vcount"></span></div>
+      <div class="checkbar"><button id="vRefresh">Actualiser depuis Wiki Masters</button><span class="msg" id="vmsg"></span></div>
+      <input type="search" id="vq" placeholder="Rechercher une commune ou un département">
+      <nav class="az dz" id="vdz" aria-label="Aller au département"></nav>
+      <div id="vlist"></div>
+    </div>
+  </section>
 
   <section id="view" hidden>
     <div class="wrap">
@@ -378,7 +408,10 @@ body.toast-on .totop{bottom:calc(74px + env(safe-area-inset-bottom,0px))}
     sorted(view).forEach(function(l){var s=stats(l);var b=document.createElement("button");
       b.textContent=l.name||"Sans nom";var sm=document.createElement("small");sm.textContent=s.h+"/"+s.n;b.appendChild(sm);
       b.style.setProperty("--c",colorOf(l));
-      if(l.id===cur)b.className="on";b.onclick=function(){select(l.id)};el.appendChild(b)});
+      if(l.id===cur&&!venteOn)b.className="on";b.onclick=function(){venteOn=false;lsRaw("cl-vente","0");select(l.id)};el.appendChild(b)});
+    if(canWrite()){var vb=document.createElement("button");vb.className="vtab"+(venteOn?" on":"");vb.textContent="À vendre";
+      if(vente){var vs=document.createElement("small");vs.textContent=vente.cards.length;vb.appendChild(vs)}
+      vb.onclick=function(){showVente(true)};el.appendChild(vb)}
     if(canWrite()){var add=document.createElement("button");add.textContent="+ Nouvelle liste";
       add.onclick=function(){$("newPanel").hidden=false;$("newName").focus()};el.appendChild(add)}
   }
@@ -464,8 +497,81 @@ body.toast-on .totop{bottom:calc(74px + env(safe-area-inset-bottom,0px))}
   window.addEventListener("scroll",onScroll,{passive:true});
   $("toTop").onclick=function(){window.scrollTo({top:0,behavior:"smooth"})};
 
+
+  // ---------- Onglet « À vendre » : cartes étiquetées « À vendre » sur Wiki Masters, classées par département ----------
+  var DEPTS=("01 Ain|02 Aisne|03 Allier|04 Alpes-de-Haute-Provence|05 Hautes-Alpes|06 Alpes-Maritimes|07 Ardèche|08 Ardennes|09 Ariège|10 Aube|11 Aude|12 Aveyron|13 Bouches-du-Rhône|14 Calvados|15 Cantal|16 Charente|17 Charente-Maritime|18 Cher|19 Corrèze|2A Corse-du-Sud|2B Haute-Corse|21 Côte-d'Or|22 Côtes-d'Armor|23 Creuse|24 Dordogne|25 Doubs|26 Drôme|27 Eure|28 Eure-et-Loir|29 Finistère|30 Gard|31 Haute-Garonne|32 Gers|33 Gironde|34 Hérault|35 Ille-et-Vilaine|36 Indre|37 Indre-et-Loire|38 Isère|39 Jura|40 Landes|41 Loir-et-Cher|42 Loire|43 Haute-Loire|44 Loire-Atlantique|45 Loiret|46 Lot|47 Lot-et-Garonne|48 Lozère|49 Maine-et-Loire|50 Manche|51 Marne|52 Haute-Marne|53 Mayenne|54 Meurthe-et-Moselle|55 Meuse|56 Morbihan|57 Moselle|58 Nièvre|59 Nord|60 Oise|61 Orne|62 Pas-de-Calais|63 Puy-de-Dôme|64 Pyrénées-Atlantiques|65 Hautes-Pyrénées|66 Pyrénées-Orientales|67 Bas-Rhin|68 Haut-Rhin|69 Rhône|70 Haute-Saône|71 Saône-et-Loire|72 Sarthe|73 Savoie|74 Haute-Savoie|75 Paris|76 Seine-Maritime|77 Seine-et-Marne|78 Yvelines|79 Deux-Sèvres|80 Somme|81 Tarn|82 Tarn-et-Garonne|83 Var|84 Vaucluse|85 Vendée|86 Vienne|87 Haute-Vienne|88 Vosges|89 Yonne|90 Territoire de Belfort|91 Essonne|92 Hauts-de-Seine|93 Seine-Saint-Denis|94 Val-de-Marne|95 Val-d'Oise|971 Guadeloupe|972 Martinique|973 Guyane|974 La Réunion|976 Mayotte").split("|").map(function(x){var i=x.indexOf(" ");return {code:x.slice(0,i),name:x.slice(i+1)}});
+  function flat(s){return String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/[-'’]/g," ").replace(/\s+/g," ")}
+  DEPTS.forEach(function(d){d.k=flat(d.code==="974"?"Réunion":d.name);d.re=new RegExp("(^|[^a-z])"+d.k.replace(/ /g," ")+"(?![a-z])","g")});
+  function deptOf(cat){
+    var f=flat(cat),start=f.indexOf("departement"),best=null;
+    DEPTS.forEach(function(d){d.re.lastIndex=0;var m;while((m=d.re.exec(f))){var pos=m.index+m[1].length;
+      var after=start>=0&&pos>start;var score=[after?1:0,after?-pos:0,d.k.length];
+      if(!best||score[0]>best.s[0]||(score[0]===best.s[0]&&(score[1]>best.s[1]||(score[1]===best.s[1]&&score[2]>best.s[2]))))best={d:d,s:score}}});
+    return best?best.d:null;
+  }
+  function isCommune(cat){var f=flat(cat);return /\bcommune\b/.test(f)||/\bville\b/.test(f)}
+  var vente=null,venteOn=lsRaw("cl-vente")==="1";
+  async function loadVente(){
+    $("vmsg").textContent="Chargement…";
+    try{
+      var r=await fetch("https://api.github.com/repos/"+encodeURIComponent(gh.owner)+"/"+encodeURIComponent(gh.repo)+"/contents/avendre.json?t="+Date.now(),
+        {headers:{"Accept":"application/vnd.github+json","Authorization":"Bearer "+gh.token,"X-GitHub-Api-Version":"2022-11-28"}});
+      if(r.status===404){vente={cards:[],d:""};$("vmsg").textContent="Pas encore de fichier : clique sur « Actualiser depuis Wiki Masters » (script Tampermonkey 1.9 requis).";renderVente();return}
+      if(!r.ok)throw new Error("GitHub a répondu "+r.status);
+      vente=JSON.parse(b64decode((await r.json()).content));$("vmsg").textContent=vente.d?"Relevé du "+new Date(vente.d).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"}):"";
+    }catch(e){$("vmsg").textContent="Impossible de charger les cartes à vendre ("+(e.message||e)+").";vente=vente||{cards:[]}}
+    renderVente();renderTabs();
+  }
+  function renderVente(){
+    var box=$("vlist"),nav=$("vdz");box.textContent="";nav.textContent="";if(!vente)return;
+    var q=fold($("vq").value.trim()),groups={},others=[],unknown=[];
+    vente.cards.forEach(function(c){
+      if(!isCommune(c.c)){others.push(c);return}
+      var d=deptOf(c.c);c._d=d;
+      if(q&&fold(c.t).indexOf(q)<0&&!(d&&(fold(d.name).indexOf(q)>=0||d.code===q.toUpperCase())))return;
+      if(!d){unknown.push(c);return}
+      (groups[d.code]=groups[d.code]||{d:d,cards:[]}).cards.push(c);
+    });
+    if(q)others=others.filter(function(c){return fold(c.t).indexOf(q)>=0});
+    var codes=Object.keys(groups).sort(function(a,b){return DEPTS.findIndex(function(d){return d.code===a})-DEPTS.findIndex(function(d){return d.code===b})});
+    var nCom=codes.reduce(function(a,k){return a+groups[k].cards.length},0)+unknown.length;
+    $("vcount").textContent=nCom+" commune"+(nCom>1?"s":"")+" · "+codes.length+" département"+(codes.length>1?"s":"")+(others.length?" · "+others.length+" autre"+(others.length>1?"s":"")+" carte"+(others.length>1?"s":""):"");
+    function row(c,showCat){var r=document.createElement("div");r.className="vrow";
+      var rr=document.createElement("span");rr.className="rar "+(c.r||"C");rr.textContent=c.r||"C";
+      var t=document.createElement("span");t.className="t";t.textContent=c.t;if(showCat){var i=document.createElement("i");i.textContent=c.c||"";t.appendChild(i)}
+      r.appendChild(rr);r.appendChild(t);
+      if(c.n>1){var nb=document.createElement("span");nb.className="nb";nb.textContent="×"+c.n;r.appendChild(nb)}
+      var a=document.createElement("a");a.href="https://fr.wikipedia.org/wiki/"+encodeURIComponent(c.t.replace(/ /g,"_"));a.target="_blank";a.rel="noopener";a.textContent="wiki ↗";r.appendChild(a);return r}
+    function group(id,code,name,cards,showCat){
+      var g=document.createElement("section");g.className="dgroup";g.id=id;
+      var h=document.createElement("h3");if(code){var b=document.createElement("b");b.textContent=code;h.appendChild(b)}
+      h.appendChild(document.createTextNode(name));var sm=document.createElement("small");sm.textContent=cards.length+" carte"+(cards.length>1?"s":"");h.appendChild(sm);g.appendChild(h);
+      cards.sort(function(a,b){return a.t.localeCompare(b.t,"fr",{sensitivity:"base"})}).forEach(function(c){g.appendChild(row(c,showCat))});box.appendChild(g);
+      var bt=document.createElement("button");bt.type="button";bt.textContent=code||(id==="dep-autres"?"Autres":"?");bt.title=name;bt.onclick=function(){
+        var top=g.getBoundingClientRect().top+window.pageYOffset-nav.offsetHeight-8;window.scrollTo({top:top,behavior:"smooth"})};nav.appendChild(bt);
+    }
+    codes.forEach(function(k){group("dep-"+k,k,groups[k].d.name,groups[k].cards,false)});
+    if(unknown.length)group("dep-x","","Département non reconnu",unknown,true);
+    if(others.length)group("dep-autres","","Autres cartes à vendre",others,true);
+    if(!box.children.length){var e=document.createElement("p");e.className="msg";e.textContent=vente.cards.length?"Aucune carte ne correspond.":"Aucune carte étiquetée « À vendre » pour l'instant.";box.appendChild(e)}
+  }
+  var vqt;$("vq").oninput=function(){clearTimeout(vqt);vqt=setTimeout(renderVente,150)};
+  $("vRefresh").onclick=function(){
+    var w=window.open("https://www.wiki-masters.com/collection#wm-vendre","wmvente");
+    $("vmsg").textContent=w?"Lecture de tes cartes à vendre dans l'onglet Wiki Masters…":"Le navigateur a bloqué l'onglet : autorise les fenêtres pour ce site, puis réessaie.";
+  };
+  window.addEventListener("message",function(e){
+    if(!/^https:\/\/(www\.)?wiki-masters\.com$/.test(e.origin)||!e.data||!e.data.wmVente)return;
+    if(e.data.error){$("vmsg").textContent="Échec : "+e.data.error+".";return}
+    setTimeout(loadVente,1500);
+  });
+  function showVente(on){venteOn=on&&canWrite();lsRaw("cl-vente",venteOn?"1":"0");if(venteOn&&!vente)loadVente();renderAll()}
+
   function renderAll(){
     $("checkBar").hidden=!canWrite();
+    if(venteOn&&!canWrite())venteOn=false;
+    $("venteView").hidden=!venteOn;
+    if(venteOn){renderTabs();$("view").hidden=true;renderVente();return}
     if(!L()){var s=sorted(view);cur=s.length?s[0].id:null}
     renderTabs();$("view").hidden=!cur;if(cur){renderHead();renderRows()}
   }
@@ -548,7 +654,7 @@ body.toast-on .totop{bottom:calc(74px + env(safe-area-inset-bottom,0px))}
         var r=await fetch(FILE+"?t="+Date.now());if(!r.ok)throw new Error("HTTP "+r.status);remote=await r.json();
         if(!$("status").textContent||$("status").textContent==="Chargement…")$("status").textContent="";
       }else $("status").textContent="";
-      rebuild();renderAll();
+      rebuild();renderAll();if(venteOn&&canWrite())loadVente();
       if(pending.length&&canWrite())save();
     }catch(e){$("status").textContent="Impossible de charger les listes ("+(e.message||"erreur")+"). Recharge la page.";$("status").className="msg err"}
   }

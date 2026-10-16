@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Wiki Masters → ma collection sur GitHub
 // @namespace    vivik88.cartes
-// @version      1.8
-// @description  Une fois par jour, relit ma collection Wiki Masters et met à jour owned.json dans mon dépôt GitHub (seulement les cartes qui ont au moins une étiquette).
+// @version      1.9
+// @description  Une fois par jour, relit ma collection Wiki Masters et met à jour owned.json dans mon dépôt GitHub (seulement les cartes qui ont au moins une étiquette), et avendre.json avec les cartes étiquetées « À vendre ».
 // @match        https://www.wiki-masters.com/*
 // @match        https://wiki-masters.com/*
 // @grant        GM_getValue
@@ -22,6 +22,8 @@
   var PAUSE_MS = 700;        // pause entre deux pages demandées au site
   var JOURS_COMPLET = 7;     // relecture complète au plus tous les N jours (détecte les cartes vendues ou échangées)
   var FICHIER = "owned.json";
+  var FICHIER_VENTE = "avendre.json";
+  var ETIQUETTE_VENTE = "a vendre"; // nom de l'étiquette, sans accents ni majuscules (« À vendre », « A VENDRE 💰 »… conviennent)
   var SANS_ETIQUETTE = false; // false : les cartes sans étiquette sont ignorées dans le relevé. true : on garde tout, comme avant.
 
   var cfg = GM_getValue("cfg", { owner: "vivik88", repo: "cartes", token: "" });
@@ -44,12 +46,19 @@
   }
 
   /* ---------- Lecture de la collection sur Wiki Masters ---------- */
-  async function page(sort, n) {
-    var r = await fetch("/api/my-collection?sort=" + sort + "&page=" + n + "&stats=0", { credentials: "include" });
+  function fold(s) { return String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(); }
+  function venteTag(x) { var t = (x.tags || []).filter(function (g) { return g && fold(g.name).indexOf(ETIQUETTE_VENTE) >= 0; })[0]; return t || null; }
+  async function page(sort, n, extra) {
+    var r = await fetch("/api/my-collection?sort=" + sort + "&page=" + n + "&stats=0" + (extra || ""), { credentials: "include" });
     if (!r.ok) { var e = new Error("le site a répondu " + r.status); e.status = r.status; throw e; }
     var rows = (await r.json()).collection || [];
     return rows.filter(function (x) { return x && x.id && x.card && x.card.wikipedia_title; })
-      .map(function (x) { return { id: String(x.id), t: x.card.wikipedia_title, r: x.card.rarity || "C", n: Math.max(1, Number(x.count) || 1), o: Date.parse(x.obtained_at || "") || 0, g: (x.tags && x.tags.length) ? 1 : 0 }; });
+      .map(function (x) {
+        var y = { id: String(x.id), t: x.card.wikipedia_title, r: x.card.rarity || "C", n: Math.max(1, Number(x.count) || 1), o: Date.parse(x.obtained_at || "") || 0, g: (x.tags && x.tags.length) ? 1 : 0 };
+        var v = venteTag(x);
+        if (v) { y.v = 1; y.c = String(x.card.category || ""); if (v.id && GM_getValue("venteTagId", "") !== v.id) GM_setValue("venteTagId", v.id); y.tv = v.id || ""; }
+        return y;
+      });
   }
 
   /* Tri « obtenues récemment » : c'est « added » sur Wiki Masters. Par sécurité, on vérifie qu'il renvoie bien les cartes de la plus
@@ -110,11 +119,11 @@
   }
 
   /* ---------- Écriture sur GitHub ---------- */
-  function gh(method, body) {
+  function gh(method, body, file) {
     return new Promise(function (resolve, reject) {
       GM_xmlhttpRequest({
         method: method,
-        url: "https://api.github.com/repos/" + encodeURIComponent(cfg.owner) + "/" + encodeURIComponent(cfg.repo) + "/contents/" + FICHIER + (method === "GET" ? "?t=" + Date.now() : ""),
+        url: "https://api.github.com/repos/" + encodeURIComponent(cfg.owner) + "/" + encodeURIComponent(cfg.repo) + "/contents/" + (file || FICHIER) + (method === "GET" ? "?t=" + Date.now() : ""),
         headers: { "Accept": "application/vnd.github+json", "Authorization": "Bearer " + cfg.token, "X-GitHub-Api-Version": "2022-11-28", "Content-Type": "application/json" },
         data: body ? JSON.stringify(body) : undefined,
         onload: function (res) {
@@ -142,6 +151,50 @@
     await gh("PUT", { message: "Mise à jour de la collection", content: b64(text), sha: sha });
     GM_setValue("lastText", text);
     return !same;
+  }
+
+  /* ---------- Cartes « à vendre » ----------
+     Le site sait peut-être filtrer la collection par étiquette : on le vérifie une seule fois (quelques requêtes) et on s'en souvient.
+     Si c'est le cas, la mise à jour quotidienne ne lit que les pages des cartes à vendre (une étiquette ajoutée sur une vieille carte est vue le jour même).
+     Sinon, on se sert des cartes déjà lues (une étiquette ajoutée sur une vieille carte est vue à la relecture complète hebdomadaire). */
+  var FILTRES = ["tag", "tags", "tagId", "tag_id", "tagIds", "tag_ids"];
+  async function venteFilter(tagId) {
+    var known = GM_getValue("venteFiltre", null);
+    if (known && known.p) return known.p;
+    if (known && known.none && Date.now() - known.t < 7 * 864e5) return null;
+    var base = (await page(await recentSort(), 0)).map(function (x) { return x.id; }).join(","); await sleep(PAUSE_MS);
+    for (var i = 0; i < FILTRES.length; i++) {
+      var rows = await page(await recentSort(), 0, "&" + FILTRES[i] + "=" + encodeURIComponent(tagId)); await sleep(PAUSE_MS);
+      if (rows.length && rows.every(function (x) { return x.tv === tagId; }) && rows.map(function (x) { return x.id; }).join(",") !== base) {
+        GM_setValue("venteFiltre", { p: FILTRES[i], t: Date.now() }); return FILTRES[i];
+      }
+    }
+    GM_setValue("venteFiltre", { none: true, t: Date.now() }); return null;
+  }
+  async function venteRows(rows) {
+    var tagId = GM_getValue("venteTagId", ""), p = tagId ? await venteFilter(tagId) : null;
+    if (!p) return Object.keys(rows).map(function (id) { return rows[id]; }).filter(function (x) { return x.v; });
+    var out = [];
+    for (var n = 0; n < 200; n++) {
+      var part = await page(await recentSort(), n, "&" + p + "=" + encodeURIComponent(tagId));
+      if (!part.length) break;
+      out = out.concat(part.filter(function (x) { return x.v; }));
+      say("cartes à vendre : " + out.length + "…", true);
+      if (part.length < 50) break;
+      await sleep(PAUSE_MS);
+    }
+    return out;
+  }
+  async function publishVente(list) {
+    var by = {};
+    list.forEach(function (x) { var k = x.t; if (!by[k]) by[k] = { t: x.t, r: x.r, c: x.c || "", n: 0 }; by[k].n += x.n || 1; });
+    var cards = Object.keys(by).sort().map(function (k) { return by[k]; });
+    var text = JSON.stringify({ d: new Date().toISOString(), n: cards.length, cards: cards });
+    if (text.replace(/"d":"[^"]*",/, "") === String(GM_getValue("lastVente", "")).replace(/"d":"[^"]*",/, "")) return false;
+    var sha; try { sha = (await gh("GET", null, FICHIER_VENTE)).sha; } catch (e) { if (e.status !== 404) throw e; }
+    await gh("PUT", { message: "Cartes à vendre", content: b64(text), sha: sha }, FICHIER_VENTE);
+    GM_setValue("lastVente", text);
+    return true;
   }
 
   /* ---------- Vérification des N dernières cartes, lancée depuis le site ----------
@@ -195,14 +248,15 @@
       say("démarrage…", true);
       if (!cfg.token) { say("pas encore configuré.", true); configure(); return; }
       var rows = GM_getValue("rows", null), lastFull = GM_getValue("lastFull", 0), added = null;
-      var needTags = !GM_getValue("tagsKnown", false);
+      var needTags = !GM_getValue("tagsKnown", false) || !GM_getValue("venteKnown", false);
       if (!rows || full || needTags || GM_getValue("partial", null) || Date.now() - lastFull > JOURS_COMPLET * 864e5) {
-        rows = await readAll(); GM_setValue("lastFull", Date.now()); GM_setValue("tagsKnown", true);
+        rows = await readAll(); GM_setValue("lastFull", Date.now()); GM_setValue("tagsKnown", true); GM_setValue("venteKnown", true);
       } else {
         added = await readRecent(rows);
       }
       GM_setValue("rows", rows); GM_setValue("lastSync", Date.now());
       var sent = await publish(rows), nb = Object.keys(rows).length;
+      try { var vl = await venteRows(rows); await publishVente(vl); } catch (e) { say("cartes à vendre non mises à jour (" + (e.message || e) + ")."); }
       say((added === null ? nb + " cartes relues" : added + " nouvelle" + (added > 1 ? "s" : "") + " carte" + (added > 1 ? "s" : "")) + (sent ? ", fichier mis à jour." : ", rien à changer."));
     } catch (e) {
       say("échec (" + (e.message || e) + "). Nouvel essai à la prochaine visite.");
@@ -253,6 +307,34 @@
   }
   GM_registerMenuCommand("Configurer", configure);
 
+  /* Mise à jour des seules cartes à vendre, lancée depuis la page de listes ou le menu. */
+  async function refreshVente() {
+    if (running) return null; running = true;
+    try {
+      if (!cfg.token) { say("pas encore configuré.", true); configure(); return null; }
+      say("lecture des cartes à vendre…", true);
+      var rows = GM_getValue("rows", null) || {};
+      if (!GM_getValue("venteKnown", false)) { running = false; await sync(true); running = true; rows = GM_getValue("rows", {}); }
+      var list = await venteRows(rows), changed = await publishVente(list);
+      var nb = {}; list.forEach(function (x) { nb[x.t] = 1; });
+      say(Object.keys(nb).length + " cartes à vendre" + (changed ? ", fichier mis à jour." : ", rien n'a changé."));
+      return { n: Object.keys(nb).length, changed: changed, filtre: !!(GM_getValue("venteFiltre", {}) || {}).p };
+    } catch (e) { say("mise à jour impossible (" + (e.message || e) + ")."); return { error: String(e.message || e) }; }
+    finally { running = false; }
+  }
+  GM_registerMenuCommand("Mettre à jour mes cartes à vendre", function () { refreshVente(); });
+
+  if (location.hash === "#wm-vendre") {
+    history.replaceState(null, "", location.pathname + location.search);
+    setTimeout(async function () {
+      var res = await refreshVente();
+      if (res && window.opener) {
+        try { window.opener.postMessage(Object.assign({ wmVente: true }, res), "*"); } catch (e) {}
+        if (!res.error) setTimeout(function () { window.close(); }, 2500);
+      }
+    }, 1500);
+    return;
+  }
   var asked = location.hash.match(/^#wm-check-(\d{1,4})$/);
   if (asked) {
     var n = Math.min(1000, Math.max(1, Number(asked[1])));

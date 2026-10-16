@@ -147,17 +147,51 @@ li.empty{justify-content:center;color:var(--mute);font-family:var(--mono)}
 li.jump{animation:jump 1.2s ease-out}
 @keyframes jump{0%{box-shadow:inset 0 0 0 2px var(--lc),0 0 22px var(--lc)}100%{box-shadow:none}}
 @media (max-width:520px){.az{grid-template-columns:repeat(9,1fr)}.az button{font-size:.72rem}.az button.wide{font-size:.58rem}}
+/* bouton de vérification */
+.checkbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.checkbar button{--c:var(--ok);font-size:.7rem}
+.checkbar .msg:not(:empty)::before{content:"> ";color:var(--cy)}
+/* bouton flottant « remonter » */
+.totop{--c:var(--cy);position:fixed;z-index:25;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));
+  width:48px;height:48px;padding:0;display:grid;place-items:center;background:rgba(7,6,15,.92);box-shadow:inset 0 0 14px -4px var(--c),0 0 18px -6px var(--c)}
+.totop svg{width:22px;height:22px}
+body.toast-on .totop{bottom:calc(74px + env(safe-area-inset-bottom,0px))}
+/* tuile de résultat */
+.modal{position:fixed;inset:0;z-index:40;background:rgba(3,2,8,.78);display:flex;align-items:center;justify-content:center;
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.mbox{width:100%;max-width:560px;max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:12px;padding:18px;
+  background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--ok);box-shadow:0 0 34px -8px var(--ok);
+  clip-path:polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px)}
+.mbox.err{border-color:var(--red);box-shadow:0 0 34px -8px var(--red)}
+.mbox h3{margin:0;font:800 1.05rem/1.2 var(--display);letter-spacing:.04em;text-transform:uppercase;color:var(--ok);text-shadow:0 0 12px rgba(57,255,136,.5)}
+.mbox.err h3{color:var(--red)}
+.mbox h4{margin:6px 0 4px;font:700 .8rem var(--display);letter-spacing:.06em;text-transform:uppercase;color:var(--c,var(--cy))}
+.mbox label{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid rgba(255,255,255,.07);cursor:pointer;font:600 1rem/1.2 var(--name);color:#fff}
+.mbox label small{margin-left:auto;font:400 .75rem var(--mono);color:var(--mute)}
+.mbox input{accent-color:var(--ok);width:18px;height:18px;flex:none}
+.mbox .bar{position:sticky;bottom:-18px;padding:10px 0 2px;background:linear-gradient(180deg,transparent,var(--panel2) 30%)}
+#checkApply{--c:var(--ok)}
 </style>
 
 </head>
 <body>
 
+<button class="totop" id="toTop" type="button" aria-label="Remonter en haut de la page" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 15l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square"/></svg></button>
+<div class="modal" id="checkModal" hidden role="dialog" aria-modal="true" aria-labelledby="checkTitle">
+  <div class="mbox">
+    <h3 id="checkTitle">Vérification des 300 dernières cartes</h3>
+    <p class="msg" id="checkSum"></p>
+    <div id="checkBody"></div>
+    <div class="bar"><button id="checkApply">Cocher la sélection</button><button id="checkClose">Fermer</button></div>
+  </div>
+</div>
 <div class="toast" id="toast" hidden><span id="toastMsg"></span><button id="toastUndo">Annuler</button></div>
 
 <span class="save" id="save"></span>
 <div class="wrap">
   <h1>Mes listes de cartes</h1>
   <div class="bar tabs" id="tabs"></div>
+  <div class="checkbar" id="checkBar" hidden><button id="bCheck">Vérifier mes 300 dernières cartes</button><span class="msg" id="checkMsg"></span></div>
   <p class="msg" id="status">Chargement…</p>
   <div class="panel" id="cfgPanel" hidden>
     <p class="hint">Pour cocher depuis cet appareil, il faut ta clé d'accès GitHub (la même que pour ton ancien site). Elle reste sur cet appareil.</p>
@@ -386,7 +420,52 @@ li.jump{animation:jump 1.2s ease-out}
     ul.appendChild(frag);updateAz(found);
     if(!shown){var e=document.createElement("li");e.className="empty";e.textContent=l.items.length?"Aucun titre ne correspond.":"Liste vide : clique sur « Modifier les titres » pour en ajouter.";ul.appendChild(e)}
   }
+  // --- Vérification des 300 dernières cartes : ouvre Wiki Masters, le script Tampermonkey lit les cartes et renvoie le résultat ici ---
+  var checkWin=null;
+  $("bCheck").onclick=function(){
+    checkWin=window.open("https://www.wiki-masters.com/collection#wm-check-300","wmcheck");
+    $("checkMsg").textContent=checkWin?"Vérification en cours dans l'onglet Wiki Masters…":"Le navigateur a bloqué l'onglet : autorise les fenêtres pour ce site, puis réessaie.";
+  };
+  var foundCheck=[];
+  function openCheck(title,sum,err){$("checkTitle").textContent=title;$("checkSum").textContent=sum;
+    $("checkModal").querySelector(".mbox").classList.toggle("err",!!err);$("checkModal").hidden=false;$("checkClose").focus()}
+  window.addEventListener("message",function(e){
+    if(!/^https:\/\/(www\.)?wiki-masters\.com$/.test(e.origin)||!e.data||!e.data.wmCheck)return;
+    var d=e.data,body=$("checkBody");body.textContent="";$("checkApply").hidden=true;foundCheck=[];
+    if(d.error){$("checkMsg").textContent="";openCheck("Vérification impossible",d.error+". Vérifie que tu es connecté à Wiki Masters, puis relance.",true);return}
+    var cards=d.cards||[],idx={};cards.forEach(function(c){if(c&&c.t)idx[norm(c.t)]=1});
+    sorted(view).forEach(function(l){
+      var h={};l.have.forEach(function(t){h[t]=1});
+      var miss=l.items.filter(function(t){return idx[norm(t)]&&!h[t]});
+      if(miss.length)foundCheck.push({l:l,titles:miss});
+    });
+    var n=foundCheck.reduce(function(a,g){return a+g.titles.length},0);
+    $("checkMsg").textContent=cards.length+" cartes vérifiées · "+(n?n+" à cocher":"rien de nouveau dans tes listes");
+    if(!n)return;
+    foundCheck.forEach(function(g){
+      var h4=document.createElement("h4");h4.textContent=g.l.name;h4.style.setProperty("--c",colorOf(g.l));body.appendChild(h4);
+      g.titles.forEach(function(t){var lab=document.createElement("label"),cb=document.createElement("input");cb.type="checkbox";cb.checked=true;cb.dataset.l=g.l.id;cb.value=t;
+        var sp=document.createElement("span");sp.textContent=t;lab.appendChild(cb);lab.appendChild(sp);body.appendChild(lab)});
+    });
+    $("checkApply").hidden=!canWrite();
+    openCheck("Nouvelles cartes pour tes listes",n+" carte"+(n>1?"s":"")+" de tes listes figure"+(n>1?"nt":"")+" parmi tes "+cards.length+" dernières cartes mais n'"+(n>1?"étaient":"était")+" pas cochée"+(n>1?"s":"")+". Décoche celles que tu ne veux pas, puis valide.");
+  });
+  $("checkApply").onclick=function(){
+    var by={},n=0;[].forEach.call($("checkBody").querySelectorAll("input:checked"),function(cb){(by[cb.dataset.l]=by[cb.dataset.l]||[]).push(cb.value);n++});
+    Object.keys(by).forEach(function(id){act({t:"bulk",id:id,titles:by[id]})});
+    $("checkModal").hidden=true;renderAll();if(n)showToast(n+" carte"+(n>1?"s cochées":" cochée")+" après vérification",null);
+  };
+  $("checkClose").onclick=function(){$("checkModal").hidden=true};
+  $("checkModal").addEventListener("click",function(e){if(e.target===this)this.hidden=true});
+  document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!$("checkModal").hidden)$("checkModal").hidden=true});
+
+  // --- bouton flottant pour remonter ---
+  function onScroll(){$("toTop").hidden=window.pageYOffset<500}
+  window.addEventListener("scroll",onScroll,{passive:true});
+  $("toTop").onclick=function(){window.scrollTo({top:0,behavior:"smooth"})};
+
   function renderAll(){
+    $("checkBar").hidden=!canWrite();
     if(!L()){var s=sorted(view);cur=s.length?s[0].id:null}
     renderTabs();$("view").hidden=!cur;if(cur){renderHead();renderRows()}
   }
@@ -396,10 +475,10 @@ li.jump{animation:jump 1.2s ease-out}
   // --- bandeau « Annuler » ---
   var toastTimer=null,undoFn=null;
   function showToast(msg,undo){
-    $("toastMsg").textContent=msg;undoFn=undo;$("toast").hidden=false;
-    clearTimeout(toastTimer);toastTimer=setTimeout(function(){$("toast").hidden=true;undoFn=null},6000);
+    $("toastMsg").textContent=msg;undoFn=undo;$("toast").hidden=false;$("toastUndo").hidden=!undo;document.body.classList.add("toast-on");
+    clearTimeout(toastTimer);toastTimer=setTimeout(function(){$("toast").hidden=true;undoFn=null;document.body.classList.remove("toast-on")},6000);
   }
-  $("toastUndo").onclick=function(){var f=undoFn;undoFn=null;$("toast").hidden=true;if(f)f()};
+  $("toastUndo").onclick=function(){var f=undoFn;undoFn=null;$("toast").hidden=true;document.body.classList.remove("toast-on");if(f)f()};
   function disarmAll(){[].forEach.call(document.querySelectorAll("li .del.arm"),function(b){clearTimeout(b._t);b.classList.remove("arm");b.textContent="×"})}
 
   function toggle(id,t,v,silent){
